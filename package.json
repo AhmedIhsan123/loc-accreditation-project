@@ -19,10 +19,11 @@
 	"homepage": "https://github.com/AhmedIhsan123/loc-project#readme",
 	"type": "module",
 	"dependencies": {
+		"ejs": "^3.1.10",
 		"express": "^5.1.0",
 		"mysql2": "^3.15.3"
 	},
 	"devDependencies": {
-		"nodemon": "^3.1.10"
+		"nodemon": "^3.1.11"
 	}
 }
