@@ -36,21 +36,25 @@ app.get("/api/divisions", async (req, res) => {
 	try {
 		// Single query with JOINs to get all data at once
 		const [rows] = await pool.query(
-			`SELECT 
+			`SELECT
 				d.division_name,
-				d.dean_name,
-				d.pen_contact,
-				d.loc_rep,
-				d.chair_name,
+				chair.person_name AS chair_name,
+				dean.person_name AS dean_name,
+				loc.person_name AS loc_rep,
+				pen.person_name AS pen_contact,
 				p.program_name,
 				p.has_been_paid,
 				p.report_submitted,
 				p.notes,
 				py.payee_name,
-				py.amount
-			FROM divisions d
-			LEFT JOIN programs p ON d.id = p.division_id
-			LEFT JOIN payees py ON p.id = py.program_id
+				py.payee_amount AS amount
+			FROM Divisions d
+			LEFT JOIN Programs p ON d.ID = p.division_ID
+			LEFT JOIN Payees py ON p.ID = py.program_ID
+			LEFT JOIN Persons chair ON d.chair_ID = chair.ID
+			LEFT JOIN Persons dean ON d.dean_ID = dean.ID
+			LEFT JOIN Persons loc ON d.loc_ID = loc.ID
+			LEFT JOIN Persons pen ON d.pen_ID = pen.ID
 			ORDER BY d.division_name, p.program_name, py.payee_name`
 		);
 
