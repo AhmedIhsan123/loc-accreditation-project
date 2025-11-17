@@ -1,5 +1,8 @@
 import express from "express";
 import mysql2 from "mysql2";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
@@ -45,9 +48,9 @@ app.get("/api/divisions", async (req, res) => {
 				p.notes,
 				py.payee_name,
 				py.amount
-			FROM divisions d
-			LEFT JOIN programs p ON d.id = p.division_id
-			LEFT JOIN payees py ON p.id = py.program_id
+			FROM Divisions d
+			LEFT JOIN Programs p ON d.id = p.division_id
+			LEFT JOIN Payees py ON p.id = py.program_id
 			ORDER BY d.division_name, p.program_name, py.payee_name`
 		);
 
