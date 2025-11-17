@@ -1,5 +1,8 @@
 import express from "express";
 import mysql2 from "mysql2";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
