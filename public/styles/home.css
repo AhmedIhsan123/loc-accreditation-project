@@ -1,0 +1,241 @@
+/* Page Layout */
+body {
+	display: grid;
+	grid-template-rows: 10% 90%; /* Header takes 10%, rest of page takes 90% */
+	height: 100vh;
+	max-height: 100vh; /* Define a max height for safe sizing */
+}
+
+main {
+	padding: 3rem;
+	height: 100%;
+}
+
+#page-container {
+	display: grid;
+	grid-template-areas:
+		"edit-form edit-form changelog"
+		"version-history version-history version-history";
+	grid-template-rows: auto 30%; /* top row 300px min, bottom row 150px */
+	gap: var(--gap-large);
+	height: 100%;
+}
+
+/* Class based styles */
+.section {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: var(--padding-medium);
+	border-radius: var(--border-radius);
+	box-shadow: var(--box-shadow-dark);
+	background-color: var(--background-color);
+
+	/* Keep sections inside parent */
+	max-height: 100%;
+	overflow: hidden; /* or overflow-y: auto if content scrolls */
+}
+
+.section-title {
+	color: var(--primary-color);
+	border-bottom: 2px solid var(--primary-color);
+}
+
+#division-cards-section,
+#history-list {
+	overflow-y: auto;
+	max-height: 100%;
+}
+
+/* Edit form section */
+#edit-form-section {
+	grid-area: edit-form;
+	cursor: pointer;
+
+	transition: background-color 0.15s ease-in-out;
+}
+
+#edit-form-section:hover {
+	background-color: var(--hover-color);
+}
+
+/* Division cards section */
+#division-cards-section {
+	display: grid;
+	gap: var(--gap-medium);
+	grid-template-columns: repeat(5, 1fr);
+	height: 100%;
+}
+
+.card-title {
+	background-color: var(--primary-color);
+	padding: var(--padding-small);
+}
+
+.div-card {
+	display: flex;
+	flex-direction: column;
+	color: white;
+	text-align: center;
+	background-color: var(--background-color);
+	box-shadow: var(--box-shadow-light);
+	height: 100%;
+}
+
+#click-form-msg {
+	color: var(--secondary-color);
+	align-self: center;
+}
+
+/* Changelog section */
+#changelog-section {
+	grid-area: changelog;
+}
+
+#history-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	max-height: 100%;
+	overflow-y: auto;
+}
+
+.history-item {
+	padding: 0.75rem;
+	border-left: var(--card-border-left);
+	margin-bottom: 0.75rem;
+	background-color: var(--background-color);
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-small);
+	transition: background-color 0.2s;
+}
+
+.history-item:hover {
+	background-color: var(--hover-color);
+}
+
+.field-name {
+	font-weight: bold;
+	color: var(--primary-color);
+	font-size: 0.95rem;
+}
+
+.field-value {
+	color: var(--secondary-color);
+	font-size: 0.95rem;
+	padding-left: var(--padding-small);
+}
+
+.timestamp {
+	color: var(--accent-color);
+	font-size: 0.8rem;
+	font-style: italic;
+}
+
+/* Version history section */
+#version-history-section {
+	grid-area: version-history;
+}
+
+.table-container {
+	width: 100%;
+	overflow-x: auto;
+}
+
+.table-container table {
+	width: 100%;
+	border-collapse: collapse;
+	white-space: nowrap; /* prevents columns from wrapping */
+}
+
+/* Contacts inside division card */
+.card-contacts {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: var(--padding-small);
+	background-color: var(--background-color);
+	box-shadow: var(--box-shadow-light);
+	border-radius: var(--border-radius);
+	margin: 0.5rem;
+	color: var(--primary-color);
+	text-align: left;
+}
+
+/* Individual program cards inside division card */
+.programs-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-small);
+	padding: var(--padding-small);
+}
+
+.program-card {
+	background-color: var(--background-color);
+	box-shadow: var(--box-shadow-light);
+	padding: var(--padding-small);
+	border-radius: var(--border-radius);
+	color: var(--primary-color);
+	text-align: center;
+	font-size: small;
+	transition: background-color 0.15s ease-in-out;
+}
+
+.program-card:hover {
+	background-color: var(--hover-color);
+}
+
+@media (max-width: 1600px) {
+	#division-cards-section {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+@media (max-width: 1380px) {
+	main {
+		padding: 0;
+	}
+	.section {
+		border-radius: 0;
+	}
+	#page-container {
+		gap: 0;
+	}
+	#division-cards-section {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (max-width: 1200px) {
+	#division-cards-section {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 800px) {
+	#page-container {
+		grid-template-areas:
+			"edit-form"
+			"changelog"
+			"version-history";
+	}
+}
+
+@media (max-width: 500px) {
+	body {
+		max-width: none;
+	}
+	main {
+		height: fit-content;
+	}
+	.section {
+		max-height: 600px;
+	}
+	#page-container {
+		grid-template-rows: auto;
+	}
+	#division-cards-section {
+		grid-template-columns: 1fr;
+	}
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Edit Sheet</title>
+		<link rel="stylesheet" href="styles/styles.css" />
+		<link rel="stylesheet" href="styles/edit.css" />
+		<script type="module" src="js/edit.js" defer></script>
+	</head>
+	<body>
+		<header>
+			<nav class="navigation-bar">
+				<h1>Green River College</h1>
+				<button id="sign-in-button">Sign in</button>
+			</nav>
+		</header>
+		<main>
+			<form id="page-form" class="content-container" action="" method="get">
+				<fieldset id="div-select-set" class="top-section fieldset">
+					<label for="division-select">Choose a Division</label>
+					<select name="division" id="division-select">
+						<option value="">-- Select division --</option>
+					</select>
+
+					<label for="dean-input">Dean: </label>
+					<input
+						type="text"
+						id="dean-input"
+						name="dean-input"
+						class="input-fields"
+						required
+						disabled
+					/>
+					<span class="error" id="err-dean">Please input a name Dean name</span>
+					<label for="pen-input">PEN Contact: </label>
+					<input
+						type="text"
+						id="pen-input"
+						name="pen-input"
+						class="input-fields"
+						required
+						disabled
+					/>
+					<span class="error" id="err-pen"
+						>Please input a name for PEN Contact</span
+					>
+					<label for="loc-input">LOC Representative: </label>
+					<input
+						type="text"
+						id="loc-input"
+						name="loc-input"
+						class="input-fields"
+						required
+						disabled
+					/>
+					<span class="error" id="err-loc"
+						>Please input a name for LOC Representative</span
+					>
+					<label for="chair-input">Chair: </label>
+					<input
+						type="text"
+						id="chair-input"
+						name="chair-input"
+						class="input-fields"
+						required
+						disabled
+					/>
+					<span class="error" id="err-chair"
+						>Please input a name for Chair</span
+					>
+				</fieldset>
+
+				<section id="programs-container" class="container"></section>
+			</form>
+		</main>
+	</body>
+</html>

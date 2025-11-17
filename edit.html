@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Edit Sheet</title>
+		<link rel="stylesheet" href="styles.css" />
+		<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+		<script src="//cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+		<link rel="stylesheet" href="//cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css">
+	</head>
+	<body>
+		<header>
+			<nav class="navigation-bar">
+				<h1>Green River College</h1>
+				<button id="sign-in-button">Sign in</button>
+			</nav>
+		</header>
+		<main>
+			<h1>Edit Sheet</h1>
+			<form>
+				<fieldset>
+					<label for="division">Division</label>
+					<select id="division" name="division">
+						<option value="default">Social Science</option>
+					</select>
+				</fieldset>
+				<legend>Programs</legend>
+				<section class="programs">
+					<p>
+						<div class="div-card">Anthropology</div>
+                        <div class="div-card">History</div>
+                        <div class="div-card">Political Science</div>
+                        <div class="div-card">Psychology</div>
+					</p>
+				</section>
+				<fieldset id="contacts">
+					<legend>Contacts</legend>
+					<table id="contacts-table" class="display">
+						<thead>
+							<tr>
+								<th>Role</th>
+								<th>Name</th>
+								<th>Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>Chair</td>
+								<td>Dr. Sarah Mitchell</td>
+								<td><button type="button">Edit</button></td>
+							</tr>
+							<tr>
+								<td>Dean</td>
+								<td>Dr. Robert Chen</td>
+								<td><button type="button">Edit</button></td>
+							</tr>
+							<tr>
+								<td>PEN Contact</td>
+								<td>Jennifer Rodriguez</td>
+								<td><button type="button">Edit</button></td>
+							</tr>
+							<tr>
+								<td>LOC Representative</td>
+								<td>Michael Thompson</td>
+								<td><button type="button">Edit</button></td>
+							</tr>
+						</tbody>
+					</table>
+				</fieldset>
+			</form>
+		</main>
+	</body>
+	<script>
+		let contactsTable = new DataTable("#contacts-table");
+	</script>
+</html>

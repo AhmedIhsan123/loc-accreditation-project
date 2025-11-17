@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Home Page</title>
+
+		<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+		<script src="//cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+		<script type="module" src="js/home.js"></script>
+
+		<link rel="stylesheet" href="styles/styles.css" />
+		<link rel="stylesheet" href="styles/home.css" />
+		<link
+			rel="stylesheet"
+			href="//cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css"
+		/>
+	</head>
+	<body>
+		<header>
+			<nav class="navigation-bar">
+				<h1>Green River College</h1>
+				<button id="sign-in-button">Sign in</button>
+			</nav>
+		</header>
+
+		<main>
+			<!-- Everything inside this section will be grid based -->
+			<div id="page-container">
+				<section id="edit-form-section" class="section">
+					<h2 class="section-title">Edit Form</h2>
+					<div id="division-cards-section"></div>
+
+					<div id="click-form-msg">
+						<a href="/edit" style="text-decoration: none; color: inherit; display: block;">
+							<p>Click to edit form</p>
+						</a>
+				</section>
+
+				<section id="changelog-section" class="section">
+					<h2 class="section-title">Recent Changes</h2>
+					<ul id="history-list">
+						<li class="history-item">
+							<span class="field-name">Chair:</span>
+							<span class="field-value">Dr. Sarah Mitchell</span>
+							<span class="timestamp">2 hours ago by Joel</span>
+						</li>
+						<li class="history-item">
+							<span class="field-name">PEN Contact:</span>
+							<span class="field-value">Jennifer Rodriguez</span>
+							<span class="timestamp">Yesterday by Vincent</span>
+						</li>
+						<li class="history-item">
+							<span class="field-name">Dean:</span>
+							<span class="field-value">Dr. Robert Chen</span>
+							<span class="timestamp">3 days ago by Arthur</span>
+						</li>
+						<li class="history-item">
+							<span class="field-name">LOC Representative:</span>
+							<span class="field-value">Michael Thompson</span>
+							<span class="timestamp">1 week ago by Rachel</span>
+						</li>
+					</ul>
+				</section>
+
+				<section id="version-history-section" class="section">
+					<h2 class="section-title">View Archives</h2>
+					<div class="table-container">
+						<table id="version-table" class="display">
+							<thead>
+								<tr>
+									<th>School Year</th>
+									<th>Changes</th>
+									<th>Dean</th>
+									<th>Chair</th>
+									<th>LOC Rep</th>
+									<th>PEN Contact</th>
+									<th>Rewarded Division</th>
+									<th>View</th>
+									<th>Download</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr>
+									<td>2025-2026</td>
+									<td>4</td>
+									<td>Dr. Alicia Barnes</td>
+									<td>Michael Turner</td>
+									<td>Sarah Johnson</td>
+									<td>David Kim</td>
+									<td>Science</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2024-2025</td>
+									<td>7</td>
+									<td>Dr. Henry Cole</td>
+									<td>Rebecca Shaw</td>
+									<td>Jonathan Lee</td>
+									<td>Maria Lopez</td>
+									<td>Mathematics</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2023-2024</td>
+									<td>2</td>
+									<td>Dr. Olivia Reyes</td>
+									<td>Christopher Davis</td>
+									<td>Emily Clark</td>
+									<td>Samuel Wright</td>
+									<td>Technology</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2022-2023</td>
+									<td>6</td>
+									<td>Dr. Patrick Wells</td>
+									<td>Kayla Morgan</td>
+									<td>Anthony Rivera</td>
+									<td>Isabella Martinez</td>
+									<td>Engineering</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2021-2022</td>
+									<td>3</td>
+									<td>Dr. Teresa Hall</td>
+									<td>Daniel Foster</td>
+									<td>Lauren Baker</td>
+									<td>James Howard</td>
+									<td>Humanities</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+
+								<tr>
+									<td>2020-2021</td>
+									<td>5</td>
+									<td>Dr. Stephanie Moore</td>
+									<td>Jackson Price</td>
+									<td>Olivia Bennett</td>
+									<td>Logan Hughes</td>
+									<td>Health Sciences</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2019-2020</td>
+									<td>1</td>
+									<td>Dr. Marcus Green</td>
+									<td>Vanessa Ruiz</td>
+									<td>Trevor Young</td>
+									<td>Chloe Patel</td>
+									<td>Business</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2018-2019</td>
+									<td>8</td>
+									<td>Dr. Rachel Adams</td>
+									<td>Ethan Sanders</td>
+									<td>Hailey Ross</td>
+									<td>Andrew Carter</td>
+									<td>Education</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2017-2018</td>
+									<td>9</td>
+									<td>Dr. William Stone</td>
+									<td>Megan Phillips</td>
+									<td>Owen Gray</td>
+									<td>Lily Torres</td>
+									<td>Performing Arts</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2016-2017</td>
+									<td>3</td>
+									<td>Dr. Karen Stewart</td>
+									<td>Brian Brooks</td>
+									<td>Nicole Ward</td>
+									<td>Gabriel Ortiz</td>
+									<td>Social Sciences</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+
+								<tr>
+									<td>2015-2016</td>
+									<td>4</td>
+									<td>Dr. Timothy Evans</td>
+									<td>Hannah Ross</td>
+									<td>Kevin Diaz</td>
+									<td>Sophia Murphy</td>
+									<td>Computer Science</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2014-2015</td>
+									<td>10</td>
+									<td>Dr. Brenda Powell</td>
+									<td>Aaron Campbell</td>
+									<td>Lillian Wood</td>
+									<td>Jacob Carter</td>
+									<td>Architecture</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2013-2014</td>
+									<td>2</td>
+									<td>Dr. Steven Miller</td>
+									<td>Chloe Evans</td>
+									<td>Bryce Hill</td>
+									<td>Ella Scott</td>
+									<td>Graphic Design</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2012-2013</td>
+									<td>6</td>
+									<td>Dr. Paula Simmons</td>
+									<td>Tyler James</td>
+									<td>Zoe Adams</td>
+									<td>Joshua Flores</td>
+									<td>Physical Education</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+								<tr>
+									<td>2011-2012</td>
+									<td>1</td>
+									<td>Dr. Dennis Harper</td>
+									<td>Sierra Powell</td>
+									<td>Leo Stewart</td>
+									<td>Caroline Brooks</td>
+									<td>Fine Arts</td>
+									<td><a href="#">View Form</a></td>
+									<td><a href="#">Download</a></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</section>
+			</div>
+		</main>
+	</body>
+	<script defer>
+		let table = new DataTable("#version-table");
+	</script>
+</html>

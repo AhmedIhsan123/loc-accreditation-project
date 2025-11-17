@@ -1,0 +1,74 @@
+:root {
+	/* ==== COLORS ==== */
+	--primary-color: #2c882b;
+	--secondary-color: #5b5a5a;
+	--speacial-color: orange;
+	--accent-color: #999;
+	--background-color: #f9f9f9;
+	--hover-color: #f0f0f0;
+	--text-color: white;
+	--section-background-color: grey;
+
+	/* ==== TYPOGRAPHY ==== */
+	--font-family: "Segoe UI", Arial, sans-serif;
+	--font-size-base: 1rem;
+	--font-size-small: 0.9rem;
+	--font-size-large: 1.25rem;
+
+	/* ==== SPACING ==== */
+	--padding-small: 0.5rem;
+	--padding-medium: 1rem;
+	--padding-large: 1.5rem;
+	--gap-small: 0.5rem;
+	--gap-medium: 1rem;
+	--gap-large: 3rem;
+
+	/* ==== BORDERS & RADIUS ==== */
+	--border-radius: 8px;
+	--border-color: black;
+	--border-width: 1px;
+	--card-border-left: 3px solid var(--primary-color);
+
+	/* ==== SHADOWS ==== */
+	--box-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+	--box-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Global reset */
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+	font-family: Arial, Helvetica, sans-serif;
+	user-select: none;
+}
+
+/* Navigation bar styles */
+.navigation-bar {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--padding-medium);
+	height: 100%;
+	color: var(--text-color);
+	background-color: var(--primary-color);
+}
+
+#sign-in-button {
+	font-size: var(--font-size-base);
+	border: 0;
+	border-radius: var(--border-radius);
+	background-color: var(--speacial-color);
+	cursor: pointer;
+	padding: var(--padding-medium) var(--padding-large);
+}
+
+@media (max-width: 500px) {
+	.navigation-bar h1 {
+		font-size: 1.25rem;
+	}
+	#sign-in-button {
+		font-size: 1rem;
+	}
+}
