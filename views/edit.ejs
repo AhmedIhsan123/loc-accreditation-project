@@ -6,6 +6,14 @@
 		<title>Edit Sheet</title>
 		<link rel="stylesheet" href="styles/styles.css" />
 		<link rel="stylesheet" href="styles/edit.css" />
+		<script>
+			// Server-provided departments for client-side script
+			<% if (typeof departments !== 'undefined' && departments.length) { %>
+				window.serverDepartments = <%- JSON.stringify(departments) %>;
+			<% } else { %>
+				window.serverDepartments = [];
+			<% } %>
+		</script>
 		<script type="module" src="js/edit.js" defer></script>
 	</head>
 	<body>
@@ -21,6 +29,10 @@
 					<label for="division-select">Choose a Division</label>
 					<select name="division" id="division-select">
 						<option value="">-- Select division --</option>
+						<% if (typeof departments !== 'undefined' && departments.length) {
+						%> <% departments.forEach(function (d) { %>
+						<option value="<%= d.divisionName %>"><%= d.divisionName %></option>
+						<% }); %> <% } %>
 					</select>
 
 					<label for="dean-input">Dean: </label>

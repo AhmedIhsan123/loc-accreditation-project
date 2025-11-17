@@ -1,4 +1,8 @@
-import { data } from "./data.js";
+// Use server-provided departments when available (injected by edit.ejs),
+// otherwise fall back to an empty array. Wrap in object with `departments` key.
+const data = {
+	departments: window.serverDepartments || []
+};
 
 /* ----------------------------
    Top-level DOM references

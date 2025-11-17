@@ -28,8 +28,73 @@ app.get("/", (req, res) => {
 	res.render("home");
 });
 
-app.get("/edit", (req, res) => {
-	res.render("edit");
+app.get("/edit", async (req, res) => {
+	try {
+		const [rows] = await pool.query(
+			`SELECT
+				d.division_name,
+				chair.person_name AS chair_name,
+				dean.person_name AS dean_name,
+				loc.person_name AS loc_rep,
+				pen.person_name AS pen_contact,
+				p.program_name,
+				p.has_been_paid,
+				p.report_submitted,
+				p.notes,
+				py.payee_name,
+				py.payee_amount AS amount
+			FROM Divisions d
+			LEFT JOIN Programs p ON d.ID = p.division_ID
+			LEFT JOIN Payees py ON p.ID = py.program_ID
+			LEFT JOIN Persons chair ON d.chair_ID = chair.ID
+			LEFT JOIN Persons dean ON d.dean_ID = dean.ID
+			LEFT JOIN Persons loc ON d.loc_ID = loc.ID
+			LEFT JOIN Persons pen ON d.pen_ID = pen.ID
+			ORDER BY d.division_name, p.program_name, py.payee_name`
+		);
+
+		const divisionsMap = {};
+		rows.forEach((row) => {
+			const divName = row.division_name;
+			if (!divisionsMap[divName]) {
+				divisionsMap[divName] = {
+					divisionName: divName,
+					deanName: row.dean_name || "",
+					penContact: row.pen_contact || "",
+					locRep: row.loc_rep || "",
+					chairName: row.chair_name || "",
+					programList: [],
+				};
+			}
+
+			if (row.program_name) {
+				let program = divisionsMap[divName].programList.find(
+					(p) => p.programName === row.program_name
+				);
+
+				if (!program) {
+					program = {
+						programName: row.program_name,
+						hasBeenPaid: Boolean(row.has_been_paid),
+						reportSubmitted: Boolean(row.report_submitted),
+						notes: row.notes || "",
+						payees: {},
+					};
+					divisionsMap[divName].programList.push(program);
+				}
+
+				if (row.payee_name) {
+					program.payees[row.payee_name] = parseFloat(row.amount);
+				}
+			}
+		});
+
+		const result = Object.values(divisionsMap);
+		res.render("edit", { departments: result });
+	} catch (error) {
+		console.error("Error fetching divisions for edit:", error);
+		res.status(500).render("edit", { departments: [] });
+	}
 });
 
 app.get("/api/divisions", async (req, res) => {
