@@ -7,12 +7,7 @@
 		<link rel="stylesheet" href="styles/styles.css" />
 		<link rel="stylesheet" href="styles/edit.css" />
 		<script>
-			// Server-provided departments for client-side script
-			<% if (typeof departments !== 'undefined' && departments.length) { %>
-				window.serverDepartments = <%- JSON.stringify(departments) %>;
-			<% } else { %>
-				window.serverDepartments = [];
-			<% } %>
+			window.serverDepartments = <%- JSON.stringify(departments || []) %>;
 		</script>
 		<script type="module" src="js/edit.js" defer></script>
 	</head>
