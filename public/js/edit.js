@@ -235,37 +235,28 @@ saveFormBtn.addEventListener("click", async () => {
 	formEditing = false;
 
 	const divisionName = divSelector.value;
+	if (!divisionName) return alert("Please select a division.");
 
-	if (!divisionName) {
-		alert("Please select a division first.");
-		return;
-	}
-
-	// Build division object in backend-friendly format
-	const divisionPayload = {
+	const divisionUpdate = {
 		divisionName,
-		chairName: chairInput.value.trim(),
-		deanName: deanInput.value.trim(),
-		penName: penInput.value.trim(),
-		locName: locInput.value.trim(),
+		dean: deanInput.value.trim(),
+		pen: penInput.value.trim(),
+		loc: locInput.value.trim(),
+		chair: chairInput.value.trim(),
+		programs: [],
 	};
-
-	// Build program objects
-	const programsPayload = [];
 
 	programsArray.forEach((program) => {
 		if (program.style.display !== "none") {
 			const programName = program.querySelector(".p-title").textContent;
 
-			const payees = [];
+			const payees = {};
 			program.querySelectorAll(".payee-item").forEach((item) => {
 				const name = item.querySelector("input[type='text']").value.trim();
 				const amount = parseFloat(
 					item.querySelector("input[type='number']").value
 				);
-				if (name) {
-					payees.push({ name, amount });
-				}
+				if (name) payees[name] = amount;
 			});
 
 			const checkboxes = program.querySelectorAll(
@@ -274,7 +265,7 @@ saveFormBtn.addEventListener("click", async () => {
 
 			const notes = program.querySelector("textarea").value.trim();
 
-			programsPayload.push({
+			divisionUpdate.programs.push({
 				programName,
 				hasBeenPaid: checkboxes[0].checked,
 				reportSubmitted: checkboxes[1].checked,
@@ -284,17 +275,18 @@ saveFormBtn.addEventListener("click", async () => {
 		}
 	});
 
-	// Send correct structure:
-	await fetch("/api/full-update", {
-		method: "PATCH",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({
-			division: divisionPayload,
-			programs: programsPayload,
-		}),
-	});
-
-	alert("All changes saved successfully.");
+	try {
+		const res = await fetch("/api/division/full-update", {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(divisionUpdate),
+		});
+		if (!res.ok) throw new Error("Failed to save");
+		alert("All changes saved successfully.");
+	} catch (err) {
+		console.error(err);
+		alert("Error saving changes.");
+	}
 });
 
 /**
