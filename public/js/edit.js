@@ -33,24 +33,19 @@ let formEditing = false;
  * ------------------------------
  * DIVISION SELECTION HANDLER
  * ------------------------------
- * Handles user selecting a division from the dropdown.
  */
 divSelector.addEventListener("change", () => {
 	const selectedDivision = divSelector.value;
 
-	// If default option is selected, hide everything and clear inputs
 	if (!selectedDivision) {
 		resetDivisionForm();
 		return;
 	}
 
-	// Show edit form button for selected division
 	editFormBtn.style.display = "inline-block";
 
-	// Show program cards for the selected division
 	showProgramCards(selectedDivision);
 
-	// Populate dean, PEN, LOC, and chair inputs from dataset
 	const option = divSelector.selectedOptions[0];
 	deanInput.value = option.dataset.dean || "";
 	penInput.value = option.dataset.pen || "";
@@ -62,20 +57,15 @@ divSelector.addEventListener("change", () => {
  * ------------------------------
  * SHOW PROGRAM CARDS
  * ------------------------------
- * Displays the program cards for the selected division.
- * @param {string} divisionName - Name of the selected division
  */
 function showProgramCards(divisionName) {
-	// Hide all program cards first
 	programsArray.forEach((program) => (program.style.display = "none"));
 
-	// Find division data
 	const division = data.departments.find(
 		(d) => d.divisionName === divisionName
 	);
 	if (!division || !division.programList) return;
 
-	// Show program cards and setup buttons
 	division.programList.forEach((prog) => {
 		const programCard = document.getElementById(`${prog.programName}-program`);
 		if (programCard) {
@@ -89,8 +79,6 @@ function showProgramCards(divisionName) {
  * ------------------------------
  * SETUP PROGRAM BUTTONS
  * ------------------------------
- * Enables editing, saving, cancelling, and payee management for a program card.
- * @param {HTMLElement} programCard - The program card element
  */
 function setupProgramButtons(programCard) {
 	const editBtn = programCard.querySelector(".program-edit-btn");
@@ -107,10 +95,6 @@ function setupProgramButtons(programCard) {
 	);
 	const notes = programCard.querySelector("textarea");
 
-	/**
-	 * Enable or disable inputs on the program card
-	 * @param {boolean} editable
-	 */
 	const setEditable = (editable) => {
 		payeeInputs.forEach((i) => (i.disabled = !editable));
 		removeBtns.forEach((b) => (b.disabled = !editable));
@@ -119,12 +103,8 @@ function setupProgramButtons(programCard) {
 		notes.disabled = !editable;
 	};
 
-	// Disable edit button initially unless master form is in edit mode
 	editBtn.disabled = !formEditing;
 
-	/** ------------------------------
-	 * EDIT PROGRAM BUTTON
-	 * ------------------------------ */
 	editBtn.addEventListener("click", () => {
 		editBtn.style.display = "none";
 		saveBtn.style.display = "inline-block";
@@ -132,16 +112,12 @@ function setupProgramButtons(programCard) {
 		setEditable(true);
 	});
 
-	/** ------------------------------
-	 * CANCEL PROGRAM BUTTON
-	 * ------------------------------ */
 	cancelBtn.addEventListener("click", () => {
 		editBtn.style.display = "inline-block";
 		saveBtn.style.display = "none";
 		cancelBtn.style.display = "none";
 		setEditable(false);
 
-		// Restore original program data
 		const division = data.departments.find((d) =>
 			d.programList.some((p) => `${p.programName}-program` === programCard.id)
 		);
@@ -172,21 +148,14 @@ function setupProgramButtons(programCard) {
 		notes.value = prog.notes;
 	});
 
-	/** ------------------------------
-	 * SAVE PROGRAM BUTTON
-	 * ------------------------------ */
 	saveBtn.addEventListener("click", () => {
 		editBtn.style.display = "inline-block";
 		saveBtn.style.display = "none";
 		cancelBtn.style.display = "none";
 		setEditable(false);
-
 		alert(`Changes saved for ${programCard.id}`);
 	});
 
-	/** ------------------------------
-	 * ADD PAYEE BUTTON
-	 * ------------------------------ */
 	addBtn.addEventListener("click", () => {
 		const payeeContainer = programCard.querySelector(".payee-container");
 		const payeeCount =
@@ -211,9 +180,6 @@ function setupProgramButtons(programCard) {
 		});
 	});
 
-	/** ------------------------------
-	 * REMOVE EXISTING PAYEE BUTTONS
-	 * ------------------------------ */
 	removeBtns.forEach((btn) => {
 		btn.addEventListener("click", (e) => {
 			const parent = e.target.closest(".payee-item");
@@ -224,10 +190,6 @@ function setupProgramButtons(programCard) {
 	});
 }
 
-/**
- * Updates payee labels to keep numbering sequential
- * @param {HTMLElement} container
- */
 function updatePayeeLabels(container) {
 	const allPayees = container.querySelectorAll(".payee-item");
 	allPayees.forEach(
@@ -264,24 +226,81 @@ cancelFormBtn.addEventListener("click", () => {
 	});
 });
 
-saveFormBtn.addEventListener("click", () => {
+/**
+ * ------------------------------
+ * SAVE MASTER FORM (FULL UPDATE)
+ * ------------------------------
+ */
+saveFormBtn.addEventListener("click", async () => {
 	formEditing = false;
-	editFormBtn.style.display = "inline-block";
-	saveFormBtn.style.display = "none";
-	cancelFormBtn.style.display = "none";
+
+	const divisionName = divSelector.value;
+
+	if (!divisionName) {
+		alert("Please select a division first.");
+		return;
+	}
+
+	// Build division object in backend-friendly format
+	const divisionPayload = {
+		divisionName,
+		chairName: chairInput.value.trim(),
+		deanName: deanInput.value.trim(),
+		penName: penInput.value.trim(),
+		locName: locInput.value.trim(),
+	};
+
+	// Build program objects
+	const programsPayload = [];
 
 	programsArray.forEach((program) => {
-		program.querySelector(".program-edit-btn").disabled = true;
+		if (program.style.display !== "none") {
+			const programName = program.querySelector(".p-title").textContent;
+
+			const payees = [];
+			program.querySelectorAll(".payee-item").forEach((item) => {
+				const name = item.querySelector("input[type='text']").value.trim();
+				const amount = parseFloat(
+					item.querySelector("input[type='number']").value
+				);
+				if (name) {
+					payees.push({ name, amount });
+				}
+			});
+
+			const checkboxes = program.querySelectorAll(
+				".program-money-section input[type='checkbox']"
+			);
+
+			const notes = program.querySelector("textarea").value.trim();
+
+			programsPayload.push({
+				programName,
+				hasBeenPaid: checkboxes[0].checked,
+				reportSubmitted: checkboxes[1].checked,
+				notes,
+				payees,
+			});
+		}
 	});
 
-	alert("All form edits enabled. Individual programs can be edited now.");
+	// Send correct structure:
+	await fetch("/api/full-update", {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({
+			division: divisionPayload,
+			programs: programsPayload,
+		}),
+	});
+
+	alert("All changes saved successfully.");
 });
 
 /**
  * ------------------------------
  * HELPER: RESET DIVISION FORM
  * ------------------------------
- * Clears all inputs, hides all buttons and program cards
  */
 function resetDivisionForm() {
 	deanInput.value = "";
