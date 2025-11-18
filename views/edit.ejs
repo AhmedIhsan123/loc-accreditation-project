@@ -7,6 +7,7 @@
 		<link rel="stylesheet" href="styles/styles.css" />
 		<link rel="stylesheet" href="styles/edit.css" />
 		<script>
+			// Inject server data for JS to handle states
 			window.serverDepartments = <%- JSON.stringify(departments || []) %>;
 		</script>
 		<script type="module" src="js/edit.js" defer></script>
@@ -19,13 +20,14 @@
 			</nav>
 		</header>
 		<main>
-			<form id="page-form" class="content-container" action="" method="get">
+			<form id="page-form" class="content-container">
+				<!-- SELECTOR FIELDEST -->
 				<fieldset id="div-select-set" class="top-section fieldset">
 					<label for="division-select">Choose a Division</label>
 					<select name="division" id="division-select">
 						<option value="">-- Select division --</option>
-						<% if (typeof departments !== 'undefined' && departments.length) {
-						%> <% departments.forEach(function (d) { %>
+						<% if (departments && departments.length) { %> <%
+						departments.forEach(function(d) { %>
 						<option value="<%= d.divisionName %>"><%= d.divisionName %></option>
 						<% }); %> <% } %>
 					</select>
@@ -36,41 +38,44 @@
 						id="dean-input"
 						name="dean-input"
 						class="input-fields"
-						required
+						value=""
 						disabled
 					/>
 					<span class="error" id="err-dean">Please input a name Dean name</span>
+
 					<label for="pen-input">PEN Contact: </label>
 					<input
 						type="text"
 						id="pen-input"
 						name="pen-input"
 						class="input-fields"
-						required
+						value=""
 						disabled
 					/>
 					<span class="error" id="err-pen"
 						>Please input a name for PEN Contact</span
 					>
+
 					<label for="loc-input">LOC Representative: </label>
 					<input
 						type="text"
 						id="loc-input"
 						name="loc-input"
 						class="input-fields"
-						required
+						value=""
 						disabled
 					/>
 					<span class="error" id="err-loc"
 						>Please input a name for LOC Representative</span
 					>
+
 					<label for="chair-input">Chair: </label>
 					<input
 						type="text"
 						id="chair-input"
 						name="chair-input"
 						class="input-fields"
-						required
+						value=""
 						disabled
 					/>
 					<span class="error" id="err-chair"
@@ -78,7 +83,103 @@
 					>
 				</fieldset>
 
-				<section id="programs-container" class="container"></section>
+				<section id="programs-container" class="container">
+					<% if (departments && departments.length &&
+					departments[0].divisionName) { %> <%
+					departments.forEach(function(dept) { %> <% if (dept.programList &&
+					dept.programList.length) { %> <%
+					dept.programList.forEach(function(program) { %>
+					<fieldset
+						class="program"
+						id="<%= program.programName.toLowerCase().replace(/\s+/g, '-') %>-program"
+						data-division="<%= dept.divisionName %>"
+						style="display: none"
+					>
+						<p class="p-title"><%= program.programName %></p>
+
+						<!-- Payee Section -->
+						<section class="payee-container program-sections">
+							<div>
+								<button type="button" style="display: none">Add</button>
+							</div>
+							<% if (program.payees) { %> <%
+							Object.entries(program.payees).forEach(function([name, amt], idx)
+							{ %>
+							<div class="payee-item">
+								<label
+									for="<%= program.programName.toLowerCase().replace(/\s+/g, '-') %>-payee-<%= idx+1 %>"
+								>
+									Payee #<%= idx+1 %>
+								</label>
+								<div class="program-payee-input-section">
+									<input
+										type="text"
+										id="<%= program.programName.toLowerCase().replace(/\s+/g, '-') %>-payee-<%= idx+1 %>"
+										value="<%= name %>"
+										disabled
+									/>
+									<input
+										type="number"
+										id="<%= program.programName.toLowerCase().replace(/\s+/g, '-') %>-payee-<%= idx+1 %>-money"
+										value="<%= amt %>"
+										placeholder="$"
+										step="0.01"
+										disabled
+									/>
+									<button
+										type="button"
+										class="remove-payee-btn"
+										style="display: none"
+									>
+										Remove
+									</button>
+								</div>
+							</div>
+							<% }); %> <% } %>
+						</section>
+
+						<!-- Money Section -->
+						<fieldset class="program-money-section">
+							<div>
+								<label>Has been paid</label>
+								<input type="checkbox" <%= program.hasBeenPaid ? 'checked' : ''
+								%> disabled>
+							</div>
+							<hr />
+							<div>
+								<label>Submitted</label>
+								<input type="checkbox" <%= program.reportSubmitted ? 'checked' :
+								'' %> disabled>
+							</div>
+						</fieldset>
+
+						<!-- Notes Section -->
+						<fieldset class="program-notes-section">
+							<label>Notes</label>
+							<textarea disabled><%= program.notes || '' %></textarea>
+						</fieldset>
+
+						<!-- Program Buttons -->
+						<div class="program-buttons">
+							<button type="button" class="program-edit-btn">Edit</button>
+							<button
+								type="button"
+								class="program-save-btn"
+								style="display: none"
+							>
+								Save Program
+							</button>
+							<button
+								type="button"
+								class="program-cancel-btn"
+								style="display: none"
+							>
+								Cancel
+							</button>
+						</div>
+					</fieldset>
+					<% }); %> <% } %> <% }); %> <% } %>
+				</section>
 			</form>
 		</main>
 	</body>
