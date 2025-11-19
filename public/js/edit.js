@@ -1,11 +1,3 @@
-/**
- * division-form-option-A.js
- * Option A: Clean rewrite preserving original logic and behavior.
- * - Improved formatting, consistent naming
- * - Added clearer in-line comments and JSDoc-style documentation
- * - No functional changes from the original file
- */
-
 /* ==============================
    FORM DATA
    ============================== */
@@ -111,7 +103,8 @@ function setupProgramButtons(programCard) {
 	programCard.dataset.initialized = "true";
 
 	const addBtn = programCard.querySelector(".add-payee-btn");
-	const removeBtns = programCard.querySelectorAll(".remove-payee-btn");
+	const removePayeeBtns = programCard.querySelectorAll(".remove-payee-btn");
+	const removeProgramBtns = programCard.querySelectorAll(".remove-program-btn");
 
 	/* ----- Add Payee Button ----- */
 	if (addBtn) {
@@ -134,22 +127,40 @@ function setupProgramButtons(programCard) {
 			payeeContainer.insertBefore(newDiv, addBtn);
 
 			// Wire remove button for the newly added payee
-			const removeBtn = newDiv.querySelector(".remove-payee-btn");
-			removeBtn.addEventListener("click", () => {
+			const removePayeeBtn = newDiv.querySelector(".remove-payee-btn");
+			removePayeeBtn.addEventListener("click", () => {
 				newDiv.remove();
 				updatePayeeLabels(payeeContainer);
 			});
 		});
 	}
 
-	/* ----- Existing Remove Buttons ----- */
-	removeBtns.forEach((btn) => {
+	/* ----- Existing Remove Payee Buttons ----- */
+	removePayeeBtns.forEach((btn) => {
 		btn.addEventListener("click", (e) => {
 			const parent = e.target.closest(".payee-item");
 			if (!parent) return; // defensive: ensure parent exists
 			parent.remove();
 			const payeeContainer = programCard.querySelector(".payee-container");
 			updatePayeeLabels(payeeContainer);
+		});
+	});
+
+	/* ----- Existing Remove Program Buttons ----- */
+	removeProgramBtns.forEach((btn) => {
+		btn.addEventListener("click", (e) => {
+			e.preventDefault();
+			// Remove the whole program card. Prefer the closest .program element,
+			// falling back to the programCard passed into this initializer.
+			const programElem = e.target.closest(".program") || programCard;
+			if (!programElem) return;
+			programElem.remove();
+
+			// If needed, hide the edit button when no visible programs remain
+			const anyVisible = document
+				.querySelectorAll(".program")
+				.some((p) => p.style.display !== "none" && document.body.contains(p));
+			if (!anyVisible) editFormBtn.style.display = "none";
 		});
 	});
 }
@@ -183,14 +194,20 @@ function saveCurrentState() {
 		loc: locInput.value,
 		chair: chairInput.value,
 		programs: [],
+		programPositions: {}, // Track original positions
+		programNames: [], // Track all program names that existed at save time
 	};
 
-	programsArray.forEach((program) => {
-		if (program.style.display === "none") return;
-
+	getVisiblePrograms().forEach((program) => {
 		const titleEl = program.querySelector(".p-title");
 		const programName = titleEl ? titleEl.textContent : "";
 		const payees = {};
+
+		// Store the program's index position in the container
+		const allPrograms = document.querySelectorAll(".program");
+		const programIndex = Array.from(allPrograms).indexOf(program);
+		originalState.programPositions[programName] = programIndex;
+		originalState.programNames.push(programName);
 
 		// Harvest payees
 		program.querySelectorAll(".payee-item").forEach((item) => {
@@ -232,16 +249,83 @@ function restoreOriginalState() {
 	locInput.value = originalState.loc;
 	chairInput.value = originalState.chair;
 
-	// Restore each visible program
-	programsArray.forEach((program) => {
-		if (program.style.display === "none") return;
+	// Iterate over saved programs (not just visible ones)
+	originalState.programs.forEach((savedProgram) => {
+		const programName = savedProgram.programName;
+		const safeId = `${programName}-program`;
+		let program = document.getElementById(safeId);
 
-		const titleEl = program.querySelector(".p-title");
-		const programName = titleEl ? titleEl.textContent : "";
-		const savedProgram = originalState.programs.find(
-			(p) => p.programName === programName
-		);
-		if (!savedProgram) return;
+		// If card was removed, rebuild it from snapshot data
+		if (!program) {
+			// Create as fieldset to match the original DOM structure
+			const newProgramCard = document.createElement("fieldset");
+			newProgramCard.className = "program";
+			newProgramCard.id = safeId;
+			newProgramCard.style.display = "block";
+			// Reset initialization flag so buttons are set up properly
+			newProgramCard.dataset.initialized = "false";
+
+			// Build the program card HTML structure to match EJS template exactly
+			newProgramCard.innerHTML = `
+				<p class="p-title">${escapeHtml(savedProgram.programName)}</p>
+
+				<section class="payee-container program-sections">
+					<!-- Payees will be inserted here -->
+					<button type="button" class="add-payee-btn" disabled>Add Payee</button>
+				</section>
+
+				<fieldset class="program-money-section">
+					<div>
+						<label>Has been paid</label>
+						<input type="checkbox" ${savedProgram.hasBeenPaid ? "checked" : ""} disabled>
+					</div>
+					<div>
+						<label>Submitted</label>
+						<input type="checkbox" ${
+							savedProgram.reportSubmitted ? "checked" : ""
+						} disabled>
+					</div>
+				</fieldset>
+
+				<fieldset class="program-notes-section">
+					<label>Notes</label>
+					<textarea disabled>${escapeHtml(savedProgram.notes || "")}</textarea>
+				</fieldset>
+
+				<button type="button" class="remove-program-btn" disabled>Remove</button>
+			`;
+
+			// Insert the rebuilt card back into the DOM at its original position
+			const container = document.getElementById("programs-container");
+			const originalPosition = originalState.programPositions[programName];
+
+			if (container) {
+				const allPrograms = Array.from(container.querySelectorAll(".program"));
+
+				// If we have a valid position and there's a program at that index, insert before it
+				if (originalPosition !== undefined && allPrograms[originalPosition]) {
+					container.insertBefore(newProgramCard, allPrograms[originalPosition]);
+				} else {
+					// Otherwise append to end
+					container.appendChild(newProgramCard);
+				}
+
+				console.log(
+					"Rebuilt program card:",
+					newProgramCard.id,
+					"at position:",
+					originalPosition
+				);
+			} else {
+				console.error("Could not find programs container");
+			}
+
+			// Set program reference to the newly rebuilt card for subsequent restoration
+			program = newProgramCard;
+
+			// Initialize the card's buttons now that it's in the DOM
+			setupProgramButtons(newProgramCard);
+		}
 
 		// Restore checkbox state (defensive checks in place)
 		const checkboxes = program.querySelectorAll(
@@ -271,13 +355,15 @@ function restoreOriginalState() {
 
 			// Insert disabled inputs to match original behaviour (read-only after restore)
 			newDiv.innerHTML = `
-        <label>Payee #${payeeIndex}</label>
-        <div class="program-payee-input-section grid">
-          <input type="text" value="${escapeHtml(name)}" disabled>
-          <input type="number" value="${escapeHtml(amount)}" disabled>
-          <button type="button" class="remove-payee-btn" disabled>Remove</button>
-        </div>
-      `;
+				<label>Payee #${payeeIndex}</label>
+				<div class="program-payee-input-section grid">
+					<input type="text" value="${escapeHtml(name)}" disabled>
+					<input type="number" value="${escapeHtml(amount)}" disabled>
+					<button type="button" class="remove-payee-btn" disabled style="${
+						Object.keys(savedProgram.payees).length ? "" : "display:none"
+					}">Remove</button>
+				</div>
+			`;
 
 			payeeContainer.insertBefore(newDiv, addBtn);
 
@@ -331,13 +417,16 @@ function setFormEditable(editable) {
 	chairInput.disabled = !editable;
 
 	// Program-level controls (only for visible program cards)
-	programsArray.forEach((program) => {
+	// Query current DOM to get all programs including any rebuilt ones
+	const currentPrograms = document.querySelectorAll(".program");
+	currentPrograms.forEach((program) => {
 		if (program.style.display === "none") return;
 
 		const payeeInputs = program.querySelectorAll(
 			".program-payee-input-section input"
 		);
-		const removeBtns = program.querySelectorAll(".remove-payee-btn");
+		const removePayeeBtns = program.querySelectorAll(".remove-payee-btn");
+		const removeProgramBtns = program.querySelectorAll(".remove-program-btn");
 		const addBtn = program.querySelector(".add-payee-btn");
 		const checkboxes = program.querySelectorAll(
 			".program-money-section input[type='checkbox']"
@@ -345,11 +434,21 @@ function setFormEditable(editable) {
 		const notes = program.querySelector("textarea");
 
 		payeeInputs.forEach((i) => (i.disabled = !editable));
-		removeBtns.forEach((b) => (b.disabled = !editable));
+		removePayeeBtns.forEach((b) => (b.disabled = !editable));
+		removeProgramBtns.forEach((b) => (b.disabled = !editable));
 		if (addBtn) addBtn.disabled = !editable;
 		checkboxes.forEach((b) => (b.disabled = !editable));
 		if (notes) notes.disabled = !editable;
 	});
+}
+
+/**
+ * Gets all currently visible program cards from the DOM.
+ * Accounts for programs that may have been added/removed/rebuilt.
+ * @returns {NodeList}
+ */
+function getVisiblePrograms() {
+	return document.querySelectorAll(".program:not([style*='display: none'])");
 }
 
 /* ==============================
@@ -402,11 +501,22 @@ saveFormBtn.addEventListener("click", async () => {
 		loc: locInput.value.trim(),
 		chair: chairInput.value.trim(),
 		programs: [],
+		deletedPrograms: [], // Track programs to delete on server
 	};
 
-	programsArray.forEach((program) => {
-		if (program.style.display === "none") return;
+	// Determine which programs were deleted
+	if (originalState && originalState.programNames) {
+		const currentProgramNames = Array.from(getVisiblePrograms()).map(
+			(p) => p.querySelector(".p-title")?.textContent || ""
+		);
+		const deletedPrograms = originalState.programNames.filter(
+			(name) => !currentProgramNames.includes(name)
+		);
+		divisionUpdate.deletedPrograms = deletedPrograms;
+		console.log("Deleted programs:", deletedPrograms);
+	}
 
+	getVisiblePrograms().forEach((program) => {
 		const titleEl = program.querySelector(".p-title");
 		const programName = titleEl ? titleEl.textContent : "";
 		const payees = {};
@@ -478,5 +588,7 @@ function resetDivisionForm() {
 	saveFormBtn.style.display = "none";
 	cancelFormBtn.style.display = "none";
 
-	programsArray.forEach((program) => (program.style.display = "none"));
+	document
+		.querySelectorAll(".program")
+		.forEach((program) => (program.style.display = "none"));
 }

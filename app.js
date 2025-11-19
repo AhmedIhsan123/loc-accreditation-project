@@ -116,6 +116,7 @@ app.get("/edit", async (req, res) => {
 /**
  * ------------------------------
  * PATCH: Full update from frontend
+ * Handles creation, updates, AND deletion of programs
  * ------------------------------
  */
 app.patch("/api/division/full-update", async (req, res) => {
@@ -124,10 +125,12 @@ app.patch("/api/division/full-update", async (req, res) => {
 	try {
 		await connection.beginTransaction();
 
-		const { divisionName, dean, pen, loc, chair, programs } = req.body;
+		const { divisionName, dean, pen, loc, chair, programs, deletedPrograms } =
+			req.body;
 		console.log("Received update request for division:", divisionName);
 		console.log("Division-level data:", { dean, pen, loc, chair });
 		console.log("Programs received:", programs);
+		console.log("Deleted programs:", deletedPrograms || []);
 
 		if (!divisionName) {
 			console.log("No division name provided!");
@@ -146,6 +149,35 @@ app.patch("/api/division/full-update", async (req, res) => {
 		}
 		const divisionID = divisionRows[0].ID;
 		console.log("Division ID:", divisionID);
+
+		// --- Delete removed programs ---
+		if (deletedPrograms && deletedPrograms.length > 0) {
+			for (const programName of deletedPrograms) {
+				console.log("Deleting program:", programName);
+
+				// First get the program ID
+				const [progRows] = await connection.query(
+					"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?",
+					[programName, divisionID]
+				);
+
+				if (progRows.length) {
+					const programID = progRows[0].ID;
+
+					// Delete payees for this program
+					await connection.query("DELETE FROM Payees WHERE program_ID = ?", [
+						programID,
+					]);
+					console.log(`Deleted payees for program ${programName}`);
+
+					// Delete the program itself
+					await connection.query("DELETE FROM Programs WHERE ID = ?", [
+						programID,
+					]);
+					console.log(`Deleted program ${programName} from DB`);
+				}
+			}
+		}
 
 		// --- Update division persons ---
 		const personMap = { chair, dean, loc, pen };
@@ -213,7 +245,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 			}
 		}
 
-		// --- Handle programs ---
+		// --- Handle remaining programs (create/update) ---
 		for (const prog of programs) {
 			console.log("Processing program:", prog.programName);
 
