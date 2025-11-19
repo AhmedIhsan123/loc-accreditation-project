@@ -29,6 +29,7 @@ const chairInput = document.getElementById("chair-input");
 const editFormBtn = document.getElementById("edit-form-btn");
 const saveFormBtn = document.getElementById("save-form-btn");
 const cancelFormBtn = document.getElementById("cancel-form-btn");
+const addProgramBtn = document.getElementById("add-program-btn");
 
 /* ==============================
    DIVISION SELECTION HANDLER
@@ -467,6 +468,7 @@ editFormBtn.addEventListener("click", () => {
 	editFormBtn.style.display = "none";
 	saveFormBtn.style.display = "inline-block";
 	cancelFormBtn.style.display = "inline-block";
+	addProgramBtn.style.display = "inline-block";
 });
 
 /**
@@ -480,6 +482,63 @@ cancelFormBtn.addEventListener("click", () => {
 	editFormBtn.style.display = "inline-block";
 	saveFormBtn.style.display = "none";
 	cancelFormBtn.style.display = "none";
+	addProgramBtn.style.display = "none";
+});
+
+/**
+ * Click handler for the add program button.
+ * - Prompts the user to name the new program
+ */
+addProgramBtn.addEventListener("click", () => {
+	// Prompt the user for the name of the program
+	const programName = prompt("Name of the program:");
+
+	// Only proceed if the user gives a name
+	if (programName) {
+		// Create as fieldset to match the original DOM structure
+		const newProgramCard = document.createElement("fieldset");
+		newProgramCard.className = "program";
+		newProgramCard.id = `${programName}-program`;
+		newProgramCard.style.display = "block";
+		// Reset initialization flag so buttons are set up properly
+		newProgramCard.dataset.initialized = "false";
+
+		// Build the program card HTML structure to match EJS template exactly
+		newProgramCard.innerHTML = `
+					<p class="p-title">${escapeHtml(programName)}</p>
+	
+					<section class="payee-container program-sections">
+						<!-- Payees will be inserted here -->
+						<button type="button" class="add-payee-btn">Add Payee</button>
+					</section>
+	
+					<fieldset class="program-money-section">
+						<div>
+							<label>Has been paid</label>
+							<input type="checkbox">
+						</div>
+						<div>
+							<label>Submitted</label>
+							<input type="checkbox">
+						</div>
+					</fieldset>
+	
+					<fieldset class="program-notes-section">
+						<label>Notes</label>
+						<textarea></textarea>
+					</fieldset>
+	
+					<button type="button" class="remove-program-btn">Remove</button>
+				`;
+		// Initialize the card's buttons now that it's in the DOM
+		setupProgramButtons(newProgramCard);
+
+		// Insert the rebuilt card back into the DOM at its original position
+		const container = document.getElementById("programs-container");
+
+		// Add the new program to the list of programs
+		container.appendChild(newProgramCard);
+	}
 });
 
 /* ==============================
