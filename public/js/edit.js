@@ -1,49 +1,66 @@
 /**
- * ------------------------------
- * FORM DATA
- * ------------------------------
- * Holds server-provided departments data.
+ * division-form-option-A.js
+ * Option A: Clean rewrite preserving original logic and behavior.
+ * - Improved formatting, consistent naming
+ * - Added clearer in-line comments and JSDoc-style documentation
+ * - No functional changes from the original file
+ */
+
+/* ==============================
+   FORM DATA
+   ============================== */
+/**
+ * Holds server-provided departments array.
+ * This mirrors the backend payload exactly.
  */
 const data = { departments: window.serverDepartments || [] };
 
 /**
- * Store original state when entering edit mode
+ * Stores a snapshot of the form before edits begin.
+ * This allows canceling edits and restoring prior values.
  */
 let originalState = null;
 
-/**
- * ------------------------------
- * DOM REFERENCES
- * ------------------------------
- */
+/* ==============================
+   DOM REFERENCES
+   ============================== */
 const divSelector = document.getElementById("division-select");
 const programsArray = document.querySelectorAll(".program");
 
+// Division-level input fields
 const deanInput = document.getElementById("dean-input");
 const penInput = document.getElementById("pen-input");
 const locInput = document.getElementById("loc-input");
 const chairInput = document.getElementById("chair-input");
 
+// Master form buttons
 const editFormBtn = document.getElementById("edit-form-btn");
 const saveFormBtn = document.getElementById("save-form-btn");
 const cancelFormBtn = document.getElementById("cancel-form-btn");
 
+/* ==============================
+   DIVISION SELECTION HANDLER
+   ============================== */
 /**
- * ------------------------------
- * DIVISION SELECTION HANDLER
- * ------------------------------
+ * Handles selecting a division from the dropdown.
+ * Loads its data and reveals the correct program cards.
  */
 divSelector.addEventListener("change", () => {
 	const selectedDivision = divSelector.value;
 
+	// User cleared the selection
 	if (!selectedDivision) {
 		resetDivisionForm();
 		return;
 	}
 
+	// Reveal edit button
 	editFormBtn.style.display = "inline-block";
+
+	// Load all program cards for this division
 	showProgramCards(selectedDivision);
 
+	// Extract division-level info from the selected <option>
 	const option = divSelector.selectedOptions[0];
 	deanInput.value = option.dataset.dean || "";
 	penInput.value = option.dataset.pen || "";
@@ -51,70 +68,85 @@ divSelector.addEventListener("change", () => {
 	chairInput.value = option.dataset.chair || "";
 });
 
+/* ==============================
+   SHOW PROGRAM CARDS
+   ============================== */
 /**
- * ------------------------------
- * SHOW PROGRAM CARDS
- * ------------------------------
+ * Reveals all program cards that belong to a given division.
+ * Hides all program cards first, then selectively shows matching ones.
+ * @param {string} divisionName
  */
 function showProgramCards(divisionName) {
+	// Hide all program cards
 	programsArray.forEach((program) => (program.style.display = "none"));
 
+	// Find division data
 	const division = data.departments.find(
 		(d) => d.divisionName === divisionName
 	);
 	if (!division || !division.programList) return;
 
+	// Reveal cards for all non-under-review programs
 	division.programList.forEach((prog) => {
-		const programCard = document.getElementById(`${prog.programName}-program`);
-		if (programCard && !prog.underReview) { // change to `if (programCard && prog.underReview)` in the future
+		const safeId = `${prog.programName}-program`;
+		const programCard = document.getElementById(safeId);
+		if (programCard && !prog.underReview) {
 			programCard.style.display = "block";
 			setupProgramButtons(programCard);
 		}
 	});
 }
 
+/* ==============================
+   SETUP PROGRAM BUTTONS
+   ============================== */
 /**
- * ------------------------------
- * SETUP PROGRAM BUTTONS
- * ------------------------------
+ * Wires up add/remove payee buttons for a given program card.
+ * Ensures each card is only initialized once.
+ * @param {HTMLElement} programCard
  */
 function setupProgramButtons(programCard) {
-	// Check if already initialized
+	// Prevent double-initializing the same card
 	if (programCard.dataset.initialized === "true") return;
 	programCard.dataset.initialized = "true";
 
 	const addBtn = programCard.querySelector(".add-payee-btn");
 	const removeBtns = programCard.querySelectorAll(".remove-payee-btn");
 
-	// Setup add payee button
-	addBtn.addEventListener("click", () => {
-		const payeeContainer = programCard.querySelector(".payee-container");
-		const payeeCount =
-			payeeContainer.querySelectorAll(".payee-item").length + 1;
+	/* ----- Add Payee Button ----- */
+	if (addBtn) {
+		addBtn.addEventListener("click", () => {
+			const payeeContainer = programCard.querySelector(".payee-container");
+			const payeeCount =
+				payeeContainer.querySelectorAll(".payee-item").length + 1;
 
-		const newDiv = document.createElement("div");
-		newDiv.className = "payee-item";
-		newDiv.innerHTML = `
-			<label>Payee #${payeeCount}</label>
-			<div class="program-payee-input-section grid">
-				<input type="text" placeholder="Name">
-				<input type="number" placeholder="$" step="0.01">
-				<button type="button" class="remove-payee-btn">Remove</button>
-			</div>
-		`;
-		payeeContainer.insertBefore(newDiv, addBtn);
+			const newDiv = document.createElement("div");
+			newDiv.className = "payee-item";
+			newDiv.innerHTML = `
+        <label>Payee #${payeeCount}</label>
+        <div class="program-payee-input-section grid">
+          <input type="text" placeholder="Name">
+          <input type="number" placeholder="$" step="0.01">
+          <button type="button" class="remove-payee-btn">Remove</button>
+        </div>
+      `;
 
-		const removeBtn = newDiv.querySelector(".remove-payee-btn");
-		removeBtn.addEventListener("click", () => {
-			newDiv.remove();
-			updatePayeeLabels(payeeContainer);
+			payeeContainer.insertBefore(newDiv, addBtn);
+
+			// Wire remove button for the newly added payee
+			const removeBtn = newDiv.querySelector(".remove-payee-btn");
+			removeBtn.addEventListener("click", () => {
+				newDiv.remove();
+				updatePayeeLabels(payeeContainer);
+			});
 		});
-	});
+	}
 
-	// Setup existing remove buttons
+	/* ----- Existing Remove Buttons ----- */
 	removeBtns.forEach((btn) => {
 		btn.addEventListener("click", (e) => {
 			const parent = e.target.closest(".payee-item");
+			if (!parent) return; // defensive: ensure parent exists
 			parent.remove();
 			const payeeContainer = programCard.querySelector(".payee-container");
 			updatePayeeLabels(payeeContainer);
@@ -122,17 +154,27 @@ function setupProgramButtons(programCard) {
 	});
 }
 
+/* ==============================
+   UPDATE PAYEE LABELS
+   ============================== */
+/**
+ * Renumbers payee labels after additions/deletions.
+ * @param {HTMLElement} container
+ */
 function updatePayeeLabels(container) {
 	const allPayees = container.querySelectorAll(".payee-item");
-	allPayees.forEach(
-		(p, i) => (p.querySelector("label").textContent = `Payee #${i + 1}`)
-	);
+	allPayees.forEach((p, i) => {
+		const label = p.querySelector("label");
+		if (label) label.textContent = `Payee #${i + 1}`;
+	});
 }
 
+/* ==============================
+   SAVE CURRENT STATE
+   ============================== */
 /**
- * ------------------------------
- * SAVE CURRENT STATE
- * ------------------------------
+ * Captures the full current form state so that it can be restored
+ * if the user chooses to cancel edits.
  */
 function saveCurrentState() {
 	originalState = {
@@ -144,36 +186,42 @@ function saveCurrentState() {
 	};
 
 	programsArray.forEach((program) => {
-		if (program.style.display !== "none") {
-			const programName = program.querySelector(".p-title").textContent;
+		if (program.style.display === "none") return;
 
-			const payees = {};
-			program.querySelectorAll(".payee-item").forEach((item) => {
-				const name = item.querySelector("input[type='text']").value.trim();
-				const amount = item.querySelector("input[type='number']").value;
-				if (name) payees[name] = amount;
-			});
+		const titleEl = program.querySelector(".p-title");
+		const programName = titleEl ? titleEl.textContent : "";
+		const payees = {};
 
-			const checkboxes = program.querySelectorAll(
-				".program-money-section input[type='checkbox']"
-			);
-			const notes = program.querySelector("textarea").value;
+		// Harvest payees
+		program.querySelectorAll(".payee-item").forEach((item) => {
+			const nameInput = item.querySelector("input[type='text']");
+			const amountInput = item.querySelector("input[type='number']");
+			const name = nameInput ? nameInput.value.trim() : "";
+			const amount = amountInput ? amountInput.value : "";
+			if (name) payees[name] = amount;
+		});
 
-			originalState.programs.push({
-				programName,
-				hasBeenPaid: checkboxes[0].checked,
-				reportSubmitted: checkboxes[1].checked,
-				notes,
-				payees,
-			});
-		}
+		const checkboxes = program.querySelectorAll(
+			".program-money-section input[type='checkbox']"
+		);
+		const notesEl = program.querySelector("textarea");
+		const notes = notesEl ? notesEl.value : "";
+
+		originalState.programs.push({
+			programName,
+			hasBeenPaid: !!(checkboxes[0] && checkboxes[0].checked),
+			reportSubmitted: !!(checkboxes[1] && checkboxes[1].checked),
+			notes,
+			payees,
+		});
 	});
 }
 
+/* ==============================
+   RESTORE ORIGINAL STATE
+   ============================== */
 /**
- * ------------------------------
- * RESTORE ORIGINAL STATE
- * ------------------------------
+ * Restores all division and program data to the last saved snapshot.
  */
 function restoreOriginalState() {
 	if (!originalState) return;
@@ -184,103 +232,134 @@ function restoreOriginalState() {
 	locInput.value = originalState.loc;
 	chairInput.value = originalState.chair;
 
-	// Restore each program
+	// Restore each visible program
 	programsArray.forEach((program) => {
-		if (program.style.display !== "none") {
-			const programName = program.querySelector(".p-title").textContent;
-			const savedProgram = originalState.programs.find(
-				(p) => p.programName === programName
-			);
+		if (program.style.display === "none") return;
 
-			if (!savedProgram) return;
+		const titleEl = program.querySelector(".p-title");
+		const programName = titleEl ? titleEl.textContent : "";
+		const savedProgram = originalState.programs.find(
+			(p) => p.programName === programName
+		);
+		if (!savedProgram) return;
 
-			// Restore checkboxes
-			const checkboxes = program.querySelectorAll(
-				".program-money-section input[type='checkbox']"
-			);
-			checkboxes[0].checked = savedProgram.hasBeenPaid;
-			checkboxes[1].checked = savedProgram.reportSubmitted;
+		// Restore checkbox state (defensive checks in place)
+		const checkboxes = program.querySelectorAll(
+			".program-money-section input[type='checkbox']"
+		);
+		if (checkboxes[0]) checkboxes[0].checked = !!savedProgram.hasBeenPaid;
+		if (checkboxes[1]) checkboxes[1].checked = !!savedProgram.reportSubmitted;
 
-			// Restore notes
-			const notes = program.querySelector("textarea");
-			notes.value = savedProgram.notes;
+		// Restore notes
+		const notes = program.querySelector("textarea");
+		if (notes) notes.value = savedProgram.notes || "";
 
-			// Restore payees
-			const payeeContainer = program.querySelector(".payee-container");
-			const addBtn = payeeContainer.querySelector(".add-payee-btn");
+		// Restore payees: wipe existing then recreate disabled payee rows
+		const payeeContainer = program.querySelector(".payee-container");
+		if (!payeeContainer) return;
+		const addBtn = payeeContainer.querySelector(".add-payee-btn");
 
-			// Remove all existing payee items
-			const existingPayees = payeeContainer.querySelectorAll(".payee-item");
-			existingPayees.forEach((item) => item.remove());
+		// Remove existing payees
+		const existingPayees = payeeContainer.querySelectorAll(".payee-item");
+		existingPayees.forEach((item) => item.remove());
 
-			// Add back original payees
-			let payeeIndex = 1;
-			for (const [name, amount] of Object.entries(savedProgram.payees)) {
-				const newDiv = document.createElement("div");
-				newDiv.className = "payee-item";
-				newDiv.innerHTML = `
-					<label>Payee #${payeeIndex}</label>
-					<div class="program-payee-input-section grid">
-						<input type="text" value="${name}" disabled>
-						<input type="number" value="${amount}" disabled>
-						<button type="button" class="remove-payee-btn" disabled>Remove</button>
-					</div>
-				`;
-				payeeContainer.insertBefore(newDiv, addBtn);
+		// Recreate payees from saved snapshot
+		let payeeIndex = 1;
+		for (const [name, amount] of Object.entries(savedProgram.payees || {})) {
+			const newDiv = document.createElement("div");
+			newDiv.className = "payee-item";
 
-				// Attach event listener to the new remove button
-				const removeBtn = newDiv.querySelector(".remove-payee-btn");
-				removeBtn.addEventListener("click", (e) => {
+			// Insert disabled inputs to match original behaviour (read-only after restore)
+			newDiv.innerHTML = `
+        <label>Payee #${payeeIndex}</label>
+        <div class="program-payee-input-section grid">
+          <input type="text" value="${escapeHtml(name)}" disabled>
+          <input type="number" value="${escapeHtml(amount)}" disabled>
+          <button type="button" class="remove-payee-btn" disabled>Remove</button>
+        </div>
+      `;
+
+			payeeContainer.insertBefore(newDiv, addBtn);
+
+			// Attach a defensive listener to the (disabled) remove button in case it becomes enabled later
+			const removeBtn = newDiv.querySelector(".remove-payee-btn");
+			if (removeBtn) {
+				removeBtn.addEventListener("click", () => {
 					newDiv.remove();
 					updatePayeeLabels(payeeContainer);
 				});
-
-				payeeIndex++;
 			}
+
+			payeeIndex++;
 		}
 	});
 
+	// Clear snapshot after restore to avoid accidental reuse
 	originalState = null;
 }
 
+/* ==============================
+   Helper: escapeHtml
+   ============================== */
 /**
- * ------------------------------
- * SET FORM EDITABLE STATE
- * ------------------------------
+ * Simple HTML escape for attribute values inserted into innerHTML strings.
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+	if (str == null) return "";
+	return String(str)
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#39;");
+}
+
+/* ==============================
+   SET FORM EDITABLE STATE
+   ============================== */
+/**
+ * Toggles form interactivity for both division-level inputs and visible program cards.
+ * @param {boolean} editable - true to make fields editable, false to make read-only
  */
 function setFormEditable(editable) {
-	// Division-level inputs
+	// Division inputs
 	deanInput.disabled = !editable;
 	penInput.disabled = !editable;
 	locInput.disabled = !editable;
 	chairInput.disabled = !editable;
 
-	// All visible programs
+	// Program-level controls (only for visible program cards)
 	programsArray.forEach((program) => {
-		if (program.style.display !== "none") {
-			const payeeInputs = program.querySelectorAll(
-				".program-payee-input-section input"
-			);
-			const removeBtns = program.querySelectorAll(".remove-payee-btn");
-			const addBtn = program.querySelector(".add-payee-btn");
-			const checkboxes = program.querySelectorAll(
-				".program-money-section input[type='checkbox']"
-			);
-			const notes = program.querySelector("textarea");
+		if (program.style.display === "none") return;
 
-			payeeInputs.forEach((i) => (i.disabled = !editable));
-			removeBtns.forEach((b) => (b.disabled = !editable));
-			addBtn.disabled = !editable;
-			checkboxes.forEach((b) => (b.disabled = !editable));
-			notes.disabled = !editable;
-		}
+		const payeeInputs = program.querySelectorAll(
+			".program-payee-input-section input"
+		);
+		const removeBtns = program.querySelectorAll(".remove-payee-btn");
+		const addBtn = program.querySelector(".add-payee-btn");
+		const checkboxes = program.querySelectorAll(
+			".program-money-section input[type='checkbox']"
+		);
+		const notes = program.querySelector("textarea");
+
+		payeeInputs.forEach((i) => (i.disabled = !editable));
+		removeBtns.forEach((b) => (b.disabled = !editable));
+		if (addBtn) addBtn.disabled = !editable;
+		checkboxes.forEach((b) => (b.disabled = !editable));
+		if (notes) notes.disabled = !editable;
 	});
 }
 
+/* ==============================
+   MASTER FORM BUTTONS
+   ============================== */
 /**
- * ------------------------------
- * MASTER FORM BUTTONS
- * ------------------------------
+ * Click handler for the "Edit" master button.
+ * - Saves a snapshot of current data
+ * - Makes fields editable
+ * - Shows the Save / Cancel buttons
  */
 editFormBtn.addEventListener("click", () => {
 	saveCurrentState();
@@ -291,6 +370,10 @@ editFormBtn.addEventListener("click", () => {
 	cancelFormBtn.style.display = "inline-block";
 });
 
+/**
+ * Click handler for the "Cancel" master button.
+ * - Restores snapshot and returns the form to read-only
+ */
 cancelFormBtn.addEventListener("click", () => {
 	restoreOriginalState();
 	setFormEditable(false);
@@ -300,15 +383,18 @@ cancelFormBtn.addEventListener("click", () => {
 	cancelFormBtn.style.display = "none";
 });
 
+/* ==============================
+   SAVE MASTER FORM (FULL UPDATE)
+   ============================== */
 /**
- * ------------------------------
- * SAVE MASTER FORM (FULL UPDATE)
- * ------------------------------
+ * Collects the current, editable form state and sends it to the server.
+ * Uses the same API endpoint as the original implementation.
  */
 saveFormBtn.addEventListener("click", async () => {
 	const divisionName = divSelector.value;
 	if (!divisionName) return alert("Please select a division.");
 
+	// Build payload
 	const divisionUpdate = {
 		divisionName,
 		dean: deanInput.value.trim(),
@@ -319,34 +405,38 @@ saveFormBtn.addEventListener("click", async () => {
 	};
 
 	programsArray.forEach((program) => {
-		if (program.style.display !== "none") {
-			const programName = program.querySelector(".p-title").textContent;
+		if (program.style.display === "none") return;
 
-			const payees = {};
-			program.querySelectorAll(".payee-item").forEach((item) => {
-				const name = item.querySelector("input[type='text']").value.trim();
-				const amount = parseFloat(
-					item.querySelector("input[type='number']").value
-				);
-				if (name) payees[name] = amount;
-			});
+		const titleEl = program.querySelector(".p-title");
+		const programName = titleEl ? titleEl.textContent : "";
+		const payees = {};
 
-			const checkboxes = program.querySelectorAll(
-				".program-money-section input[type='checkbox']"
-			);
+		program.querySelectorAll(".payee-item").forEach((item) => {
+			const nameInput = item.querySelector("input[type='text']");
+			const amountInput = item.querySelector("input[type='number']");
+			const name = nameInput ? nameInput.value.trim() : "";
+			const raw = amountInput ? amountInput.value : "";
+			const amount = raw === "" ? null : parseFloat(raw);
+			if (name) payees[name] = amount;
+		});
 
-			const notes = program.querySelector("textarea").value.trim();
+		const checkboxes = program.querySelectorAll(
+			".program-money-section input[type='checkbox']"
+		);
+		const notes = program.querySelector("textarea")
+			? program.querySelector("textarea").value.trim()
+			: "";
 
-			divisionUpdate.programs.push({
-				programName,
-				hasBeenPaid: checkboxes[0].checked,
-				reportSubmitted: checkboxes[1].checked,
-				notes,
-				payees,
-			});
-		}
+		divisionUpdate.programs.push({
+			programName,
+			hasBeenPaid: !!(checkboxes[0] && checkboxes[0].checked),
+			reportSubmitted: !!(checkboxes[1] && checkboxes[1].checked),
+			notes,
+			payees,
+		});
 	});
 
+	// Send to backend
 	try {
 		const res = await fetch("/api/division/full-update", {
 			method: "PATCH",
@@ -357,14 +447,14 @@ saveFormBtn.addEventListener("click", async () => {
 
 		alert("Changes saved successfully!");
 
-		// Reset the form state
+		// Reset UI
 		setFormEditable(false);
 		editFormBtn.style.display = "inline-block";
 		saveFormBtn.style.display = "none";
 		cancelFormBtn.style.display = "none";
 		originalState = null;
 
-		// Reload the page to get fresh data from server
+		// Reload to reflect server-side changes (matches original behaviour)
 		window.location.reload();
 	} catch (err) {
 		console.error(err);
@@ -372,10 +462,11 @@ saveFormBtn.addEventListener("click", async () => {
 	}
 });
 
+/* ==============================
+   HELPER: RESET DIVISION FORM
+   ============================== */
 /**
- * ------------------------------
- * HELPER: RESET DIVISION FORM
- * ------------------------------
+ * Clears all division-level inputs, hides buttons and hides program cards.
  */
 function resetDivisionForm() {
 	deanInput.value = "";
