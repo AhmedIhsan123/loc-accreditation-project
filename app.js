@@ -51,6 +51,7 @@ app.get("/edit", async (req, res) => {
 				p.program_name,
 				p.has_been_paid,
 				p.report_submitted,
+				p.under_review,
 				p.notes,
 				py.ID AS payee_ID,
 				py.payee_name,
@@ -91,6 +92,7 @@ app.get("/edit", async (req, res) => {
 						programName: row.program_name,
 						hasBeenPaid: Boolean(row.has_been_paid),
 						reportSubmitted: Boolean(row.report_submitted),
+						underReview: Boolean(row.under_review),
 						notes: row.notes || "",
 						payees: {},
 					};

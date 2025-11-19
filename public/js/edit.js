@@ -66,7 +66,7 @@ function showProgramCards(divisionName) {
 
 	division.programList.forEach((prog) => {
 		const programCard = document.getElementById(`${prog.programName}-program`);
-		if (programCard) {
+		if (programCard && !prog.underReview) { // change to `if (programCard && prog.underReview)` in the future
 			programCard.style.display = "block";
 			setupProgramButtons(programCard);
 		}
