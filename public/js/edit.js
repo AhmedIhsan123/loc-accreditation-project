@@ -80,11 +80,11 @@ function showProgramCards(divisionName) {
 	);
 	if (!division || !division.programList) return;
 
-	// Reveal cards for all non-under-review programs
+	// Reveal cards for all under-review programs
 	division.programList.forEach((prog) => {
 		const safeId = `${prog.programName}-program`;
 		const programCard = document.getElementById(safeId);
-		if (programCard && !prog.underReview) {
+		if (programCard && prog.underReview) {
 			programCard.style.display = "block";
 			setupProgramButtons(programCard);
 		}
@@ -476,6 +476,7 @@ editFormBtn.addEventListener("click", () => {
 	saveFormBtn.style.display = "inline-block";
 	cancelFormBtn.style.display = "inline-block";
 	addProgramBtn.style.display = "inline-block";
+	returnBtn.style.display = "inline-block";
 });
 
 /**
@@ -490,6 +491,7 @@ cancelFormBtn.addEventListener("click", () => {
 	saveFormBtn.style.display = "none";
 	cancelFormBtn.style.display = "none";
 	addProgramBtn.style.display = "none";
+	returnBtn.style.display = "none";
 });
 
 /**
