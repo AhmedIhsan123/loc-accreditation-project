@@ -6,13 +6,12 @@
 		<title>Edit Sheet</title>
 		<link rel="stylesheet" href="styles/styles.css" />
 		<link rel="stylesheet" href="styles/edit.css" />
+		<% // Compute departments JSON on the server before rendering into script
+		let departmentsJson = '[]'; if (typeof departments !== 'undefined' &&
+		departments && departments.length > 0) { departmentsJson =
+		JSON.stringify(departments); } %>
 		<script>
-			// Server-provided departments for client-side script
-			<% if (typeof departments !== 'undefined' && departments.length) { %>
-				window.serverDepartments = <%- JSON.stringify(departments) %>;
-			<% } else { %>
-				window.serverDepartments = [];
-			<% } %>
+			window.serverDepartments = <%- departmentsJson %>;
 		</script>
 		<script type="module" src="js/edit.js" defer></script>
 	</head>

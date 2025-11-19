@@ -1,7 +1,7 @@
-// Use server-provided departments when available (injected by edit.ejs),
+// Require server-provided departments when available (injected by edit.ejs),
 // otherwise fall back to an empty array. Wrap in object with `departments` key.
 const data = {
-	departments: window.serverDepartments || []
+	departments: window.serverDepartments || [],
 };
 
 /* ----------------------------
@@ -498,6 +498,11 @@ function saveProgramState(
 		if (submittedInput) program.reportSubmitted = submittedInput.checked;
 	}
 
+	// Persist program changes to database
+	if (selectedDivision) {
+		persistDivisionToDB(selectedDivision);
+	}
+
 	// Disable editing and reset button visibility
 	greyOutProgramCard(fieldsetRef);
 	editBtn.style.display = "inline-block";
@@ -670,6 +675,9 @@ function saveContactState() {
 	selectedDivision.locRep = pForm.selectFieldset.locRef.value.trim();
 	selectedDivision.chairName = pForm.selectFieldset.chairRef.value.trim();
 
+	// Persist to database via API
+	persistDivisionToDB(selectedDivision);
+
 	// Lock UI
 	greyOutContactInfo();
 
@@ -701,6 +709,35 @@ function updateContactInfo(name) {
 function updateProgramCards(name) {
 	const dept = data.departments.find((d) => d.divisionName === name);
 	createProgramCards(dept);
+}
+
+/**
+ * Persist division and program data to the server
+ */
+async function persistDivisionToDB(division) {
+	try {
+		const response = await fetch("/api/save-division", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(division),
+		});
+
+		const result = await response.json();
+		if (!response.ok) {
+			console.error("Failed to save division:", result.error);
+			alert("Error saving data: " + (result.error || "Unknown error"));
+			return false;
+		}
+
+		console.log("Division saved successfully:", result);
+		return true;
+	} catch (error) {
+		console.error("Error persisting division to DB:", error);
+		alert("Error saving data: " + error.message);
+		return false;
+	}
 }
 
 /* ----------------------------
