@@ -282,7 +282,17 @@ saveFormBtn.addEventListener("click", async () => {
 			body: JSON.stringify(divisionUpdate),
 		});
 		if (!res.ok) throw new Error("Failed to save");
-		alert("All changes saved successfully.");
+
+		alert("Changes saved successfully!");
+
+		// Reset the form state
+		editFormBtn.style.display = "inline-block";
+		saveFormBtn.style.display = "none";
+		cancelFormBtn.style.display = "none";
+
+		programsArray.forEach((program) => {
+			program.querySelector(".program-edit-btn").disabled = true;
+		});
 	} catch (err) {
 		console.error(err);
 		alert("Error saving changes.");

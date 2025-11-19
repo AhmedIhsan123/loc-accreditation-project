@@ -92,17 +92,13 @@ app.get("/edit", async (req, res) => {
 						hasBeenPaid: Boolean(row.has_been_paid),
 						reportSubmitted: Boolean(row.report_submitted),
 						notes: row.notes || "",
-						payees: [],
+						payees: {},
 					};
 					divisionsMap[divName].programList.push(program);
 				}
 
 				if (row.payee_name) {
-					program.payees.push({
-						payeeID: row.payee_ID,
-						payeeName: row.payee_name,
-						payeeAmount: row.amount,
-					});
+					program.payees[row.payee_name] = row.amount;
 				}
 			}
 		});
@@ -121,7 +117,11 @@ app.get("/edit", async (req, res) => {
  * ------------------------------
  */
 app.patch("/api/division/full-update", async (req, res) => {
+	const connection = await pool.getConnection();
+
 	try {
+		await connection.beginTransaction();
+
 		const { divisionName, dean, pen, loc, chair, programs } = req.body;
 		console.log("Received update request for division:", divisionName);
 		console.log("Division-level data:", { dean, pen, loc, chair });
@@ -133,12 +133,13 @@ app.patch("/api/division/full-update", async (req, res) => {
 		}
 
 		// --- Get division ID ---
-		const [divisionRows] = await pool.query(
+		const [divisionRows] = await connection.query(
 			"SELECT ID FROM Divisions WHERE division_name = ?",
 			[divisionName]
 		);
 		if (!divisionRows.length) {
 			console.log("Division not found in DB:", divisionName);
+			await connection.rollback();
 			return res.status(404).json({ error: "Division not found" });
 		}
 		const divisionID = divisionRows[0].ID;
@@ -151,7 +152,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 			console.log(`Processing ${role}: ${name}`);
 
 			// Get or create person
-			let [personRows] = await pool.query(
+			let [personRows] = await connection.query(
 				"SELECT ID FROM Persons WHERE person_name = ?",
 				[name]
 			);
@@ -160,7 +161,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 				personID = personRows[0].ID;
 				console.log(`Found existing person ${name} with ID:`, personID);
 			} else {
-				const [result] = await pool.query(
+				const [result] = await connection.query(
 					"INSERT INTO Persons (person_name) VALUES (?)",
 					[name]
 				);
@@ -169,10 +170,10 @@ app.patch("/api/division/full-update", async (req, res) => {
 			}
 
 			// Update division
-			await pool.query(`UPDATE Divisions SET ${role}_ID = ? WHERE ID = ?`, [
-				personID,
-				divisionID,
-			]);
+			await connection.query(
+				`UPDATE Divisions SET ${role}_ID = ? WHERE ID = ?`,
+				[personID, divisionID]
+			);
 			console.log(`Updated division ${divisionID} ${role}_ID to`, personID);
 		}
 
@@ -180,7 +181,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 		for (const prog of programs) {
 			console.log("Processing program:", prog.programName);
 
-			const [progRows] = await pool.query(
+			const [progRows] = await connection.query(
 				"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?",
 				[prog.programName, divisionID]
 			);
@@ -188,7 +189,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 			let programID;
 			if (progRows.length) {
 				programID = progRows[0].ID;
-				await pool.query(
+				await connection.query(
 					`UPDATE Programs
 					 SET has_been_paid = ?, report_submitted = ?, notes = ?
 					 WHERE ID = ?`,
@@ -198,7 +199,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 					`Updated existing program ${prog.programName} (ID: ${programID})`
 				);
 			} else {
-				const [result] = await pool.query(
+				const [result] = await connection.query(
 					`INSERT INTO Programs
 					 (program_name, division_ID, has_been_paid, report_submitted, notes)
 					 VALUES (?, ?, ?, ?, ?)`,
@@ -217,29 +218,50 @@ app.patch("/api/division/full-update", async (req, res) => {
 				);
 			}
 
-			// --- Handle payees ---
-			const existingPayeeNames = Object.keys(prog.payees);
-			console.log("Existing payee names in frontend data:", existingPayeeNames);
+			// --- Handle payees - IMPROVED LOGIC ---
+			const incomingPayeeNames = Object.keys(prog.payees);
+			console.log("Incoming payee names from frontend:", incomingPayeeNames);
 
-			await pool.query(
-				"DELETE FROM Payees WHERE program_ID = ? AND payee_name NOT IN (?)",
-				[programID, existingPayeeNames.length ? existingPayeeNames : [""]]
+			// Get existing payees for this program
+			const [existingPayees] = await connection.query(
+				"SELECT ID, payee_name, payee_amount FROM Payees WHERE program_ID = ?",
+				[programID]
 			);
+			console.log("Existing payees in DB:", existingPayees);
+
+			// Delete payees that are no longer in the incoming data
+			if (incomingPayeeNames.length > 0) {
+				await connection.query(
+					"DELETE FROM Payees WHERE program_ID = ? AND payee_name NOT IN (?)",
+					[programID, incomingPayeeNames]
+				);
+			} else {
+				// If no incoming payees, delete all payees for this program
+				await connection.query("DELETE FROM Payees WHERE program_ID = ?", [
+					programID,
+				]);
+			}
 			console.log("Deleted removed payees from DB for program ID:", programID);
 
+			// Insert or update each payee
 			for (const [name, amount] of Object.entries(prog.payees)) {
-				const [payeeRows] = await pool.query(
+				if (!name || name.trim() === "") continue; // Skip empty names
+
+				const [payeeRows] = await connection.query(
 					"SELECT ID FROM Payees WHERE program_ID = ? AND payee_name = ?",
 					[programID, name]
 				);
+
 				if (payeeRows.length) {
-					await pool.query("UPDATE Payees SET payee_amount = ? WHERE ID = ?", [
-						amount,
-						payeeRows[0].ID,
-					]);
+					// Update existing payee
+					await connection.query(
+						"UPDATE Payees SET payee_amount = ? WHERE ID = ?",
+						[amount, payeeRows[0].ID]
+					);
 					console.log(`Updated payee ${name} with amount ${amount}`);
 				} else {
-					await pool.query(
+					// Insert new payee (ID will auto-increment)
+					await connection.query(
 						"INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)",
 						[name, amount, programID]
 					);
@@ -248,11 +270,17 @@ app.patch("/api/division/full-update", async (req, res) => {
 			}
 		}
 
+		await connection.commit();
 		console.log("Full update finished successfully.");
 		res.json({ success: true });
 	} catch (err) {
+		await connection.rollback();
 		console.error("Error during full update:", err);
-		res.status(500).json({ error: "Failed to update division" });
+		res
+			.status(500)
+			.json({ error: "Failed to update division", details: err.message });
+	} finally {
+		connection.release();
 	}
 });
 
