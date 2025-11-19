@@ -200,6 +200,7 @@ function saveCurrentState() {
 	};
 
 	getVisiblePrograms().forEach((program) => {
+		if (program.dataset.newProgram === "true") return; // Skip new ones
 		const titleEl = program.querySelector(".p-title");
 		const programName = titleEl ? titleEl.textContent : "";
 		const payees = {};
@@ -243,6 +244,11 @@ function saveCurrentState() {
  */
 function restoreOriginalState() {
 	if (!originalState) return;
+
+	// Remove any programs created during this edit session
+	document
+		.querySelectorAll('.program[data-new-program="true"]')
+		.forEach((p) => p.remove());
 
 	// Restore division-level inputs
 	deanInput.value = originalState.dean;
@@ -490,55 +496,46 @@ cancelFormBtn.addEventListener("click", () => {
  * - Prompts the user to name the new program
  */
 addProgramBtn.addEventListener("click", () => {
-	// Prompt the user for the name of the program
 	const programName = prompt("Name of the program:");
+	if (!programName) return;
 
-	// Only proceed if the user gives a name
-	if (programName) {
-		// Create as fieldset to match the original DOM structure
-		const newProgramCard = document.createElement("fieldset");
-		newProgramCard.className = "program";
-		newProgramCard.id = `${programName}-program`;
-		newProgramCard.style.display = "block";
-		// Reset initialization flag so buttons are set up properly
-		newProgramCard.dataset.initialized = "false";
+	const newProgramCard = document.createElement("fieldset");
+	newProgramCard.className = "program";
+	newProgramCard.id = `${programName}-program`;
+	newProgramCard.style.display = "block";
 
-		// Build the program card HTML structure to match EJS template exactly
-		newProgramCard.innerHTML = `
-					<p class="p-title">${escapeHtml(programName)}</p>
-	
-					<section class="payee-container program-sections">
-						<!-- Payees will be inserted here -->
-						<button type="button" class="add-payee-btn">Add Payee</button>
-					</section>
-	
-					<fieldset class="program-money-section">
-						<div>
-							<label>Has been paid</label>
-							<input type="checkbox">
-						</div>
-						<div>
-							<label>Submitted</label>
-							<input type="checkbox">
-						</div>
-					</fieldset>
-	
-					<fieldset class="program-notes-section">
-						<label>Notes</label>
-						<textarea></textarea>
-					</fieldset>
-	
-					<button type="button" class="remove-program-btn">Remove</button>
-				`;
-		// Initialize the card's buttons now that it's in the DOM
-		setupProgramButtons(newProgramCard);
+	newProgramCard.dataset.initialized = "false";
+	newProgramCard.dataset.newProgram = "true";
 
-		// Insert the rebuilt card back into the DOM at its original position
-		const container = document.getElementById("programs-container");
+	newProgramCard.innerHTML = `
+		<p class="p-title">${escapeHtml(programName)}</p>
 
-		// Add the new program to the list of programs
-		container.appendChild(newProgramCard);
-	}
+		<section class="payee-container program-sections">
+			<button type="button" class="add-payee-btn">Add Payee</button>
+		</section>
+
+		<fieldset class="program-money-section">
+			<div>
+				<label>Has been paid</label>
+				<input type="checkbox">
+			</div>
+			<div>
+				<label>Submitted</label>
+				<input type="checkbox">
+			</div>
+		</fieldset>
+
+		<fieldset class="program-notes-section">
+			<label>Notes</label>
+			<textarea></textarea>
+		</fieldset>
+
+		<button type="button" class="remove-program-btn">Remove</button>
+	`;
+
+	setupProgramButtons(newProgramCard);
+
+	document.getElementById("programs-container").appendChild(newProgramCard);
 });
 
 /* ==============================
