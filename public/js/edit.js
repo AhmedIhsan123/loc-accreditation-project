@@ -30,6 +30,7 @@ const editFormBtn = document.getElementById("edit-form-btn");
 const saveFormBtn = document.getElementById("save-form-btn");
 const cancelFormBtn = document.getElementById("cancel-form-btn");
 const addProgramBtn = document.getElementById("add-program-btn");
+const returnBtn = document.getElementById("return-btn");
 
 /* ==============================
    DIVISION SELECTION HANDLER
@@ -492,6 +493,22 @@ cancelFormBtn.addEventListener("click", () => {
 });
 
 /**
+ * Click handler for the return to homepage button.
+ * - Redirects to home page
+ */
+returnBtn.addEventListener("click", () => {
+	restoreOriginalState();
+	setFormEditable(false);
+
+	editFormBtn.style.display = "inline-block";
+	saveFormBtn.style.display = "none";
+	cancelFormBtn.style.display = "none";
+	addProgramBtn.style.display = "none";
+
+	window.location.href = "/"; // go to main page
+});
+
+/**
  * Click handler for the add program button.
  * - Prompts the user to name the new program
  */
@@ -626,6 +643,8 @@ saveFormBtn.addEventListener("click", async () => {
 		console.error(err);
 		alert("Error saving changes.");
 	}
+
+	window.location.href = "/"; // go to main page
 });
 
 /* ==============================
