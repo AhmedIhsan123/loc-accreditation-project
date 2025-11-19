@@ -151,30 +151,64 @@ app.patch("/api/division/full-update", async (req, res) => {
 			if (!name) continue;
 			console.log(`Processing ${role}: ${name}`);
 
-			// Get or create person
-			let [personRows] = await connection.query(
-				"SELECT ID FROM Persons WHERE person_name = ?",
-				[name]
+			// Get the current person ID for this role in the division
+			const [currentDivision] = await connection.query(
+				`SELECT ${role}_ID FROM Divisions WHERE ID = ?`,
+				[divisionID]
 			);
+			const currentPersonID = currentDivision[0][`${role}_ID`];
+
 			let personID;
-			if (personRows.length) {
-				personID = personRows[0].ID;
-				console.log(`Found existing person ${name} with ID:`, personID);
+
+			if (currentPersonID) {
+				// Get the current person's name
+				const [currentPerson] = await connection.query(
+					"SELECT person_name FROM Persons WHERE ID = ?",
+					[currentPersonID]
+				);
+				const currentPersonName = currentPerson[0]?.person_name;
+
+				if (currentPersonName !== name) {
+					// Name has changed - update the person record
+					await connection.query(
+						"UPDATE Persons SET person_name = ? WHERE ID = ?",
+						[name, currentPersonID]
+					);
+					personID = currentPersonID;
+					console.log(
+						`Updated person ID ${currentPersonID} from '${currentPersonName}' to '${name}'`
+					);
+				} else {
+					// Name hasn't changed
+					personID = currentPersonID;
+					console.log(`Person ${name} unchanged (ID: ${personID})`);
+				}
 			} else {
-				const [result] = await connection.query(
-					"INSERT INTO Persons (person_name) VALUES (?)",
+				// No current person assigned - check if this person exists or create new
+				let [personRows] = await connection.query(
+					"SELECT ID FROM Persons WHERE person_name = ?",
 					[name]
 				);
-				personID = result.insertId;
-				console.log(`Created new person ${name} with ID:`, personID);
-			}
 
-			// Update division
-			await connection.query(
-				`UPDATE Divisions SET ${role}_ID = ? WHERE ID = ?`,
-				[personID, divisionID]
-			);
-			console.log(`Updated division ${divisionID} ${role}_ID to`, personID);
+				if (personRows.length) {
+					personID = personRows[0].ID;
+					console.log(`Found existing person ${name} with ID:`, personID);
+				} else {
+					const [result] = await connection.query(
+						"INSERT INTO Persons (person_name) VALUES (?)",
+						[name]
+					);
+					personID = result.insertId;
+					console.log(`Created new person ${name} with ID:`, personID);
+				}
+
+				// Update division to point to this person
+				await connection.query(
+					`UPDATE Divisions SET ${role}_ID = ? WHERE ID = ?`,
+					[personID, divisionID]
+				);
+				console.log(`Updated division ${divisionID} ${role}_ID to`, personID);
+			}
 		}
 
 		// --- Handle programs ---

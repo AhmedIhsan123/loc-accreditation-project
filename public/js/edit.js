@@ -227,6 +227,14 @@ function restoreOriginalState() {
 					</div>
 				`;
 				payeeContainer.insertBefore(newDiv, addBtn);
+
+				// Attach event listener to the new remove button
+				const removeBtn = newDiv.querySelector(".remove-payee-btn");
+				removeBtn.addEventListener("click", (e) => {
+					newDiv.remove();
+					updatePayeeLabels(payeeContainer);
+				});
+
 				payeeIndex++;
 			}
 		}
