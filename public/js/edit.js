@@ -7,6 +7,11 @@
 const data = { departments: window.serverDepartments || [] };
 
 /**
+ * Store original state when entering edit mode
+ */
+let originalState = null;
+
+/**
  * ------------------------------
  * DOM REFERENCES
  * ------------------------------
@@ -24,12 +29,6 @@ const saveFormBtn = document.getElementById("save-form-btn");
 const cancelFormBtn = document.getElementById("cancel-form-btn");
 
 /**
- * Tracks whether the master form is in editing mode
- * @type {boolean}
- */
-let formEditing = false;
-
-/**
  * ------------------------------
  * DIVISION SELECTION HANDLER
  * ------------------------------
@@ -43,7 +42,6 @@ divSelector.addEventListener("change", () => {
 	}
 
 	editFormBtn.style.display = "inline-block";
-
 	showProgramCards(selectedDivision);
 
 	const option = divSelector.selectedOptions[0];
@@ -81,81 +79,14 @@ function showProgramCards(divisionName) {
  * ------------------------------
  */
 function setupProgramButtons(programCard) {
-	const editBtn = programCard.querySelector(".program-edit-btn");
-	const saveBtn = programCard.querySelector(".program-save-btn");
-	const cancelBtn = programCard.querySelector(".program-cancel-btn");
+	// Check if already initialized
+	if (programCard.dataset.initialized === "true") return;
+	programCard.dataset.initialized = "true";
 
-	const payeeInputs = programCard.querySelectorAll(
-		".program-payee-input-section input"
-	);
-	const removeBtns = programCard.querySelectorAll(".remove-payee-btn");
 	const addBtn = programCard.querySelector(".add-payee-btn");
-	const checkboxes = programCard.querySelectorAll(
-		".program-money-section input[type='checkbox']"
-	);
-	const notes = programCard.querySelector("textarea");
+	const removeBtns = programCard.querySelectorAll(".remove-payee-btn");
 
-	const setEditable = (editable) => {
-		payeeInputs.forEach((i) => (i.disabled = !editable));
-		removeBtns.forEach((b) => (b.disabled = !editable));
-		addBtn.disabled = !editable;
-		checkboxes.forEach((b) => (b.disabled = !editable));
-		notes.disabled = !editable;
-	};
-
-	editBtn.disabled = !formEditing;
-
-	editBtn.addEventListener("click", () => {
-		editBtn.style.display = "none";
-		saveBtn.style.display = "inline-block";
-		cancelBtn.style.display = "inline-block";
-		setEditable(true);
-	});
-
-	cancelBtn.addEventListener("click", () => {
-		editBtn.style.display = "inline-block";
-		saveBtn.style.display = "none";
-		cancelBtn.style.display = "none";
-		setEditable(false);
-
-		const division = data.departments.find((d) =>
-			d.programList.some((p) => `${p.programName}-program` === programCard.id)
-		);
-		const prog = division.programList.find(
-			(p) => `${p.programName}-program` === programCard.id
-		);
-
-		const inputs = programCard.querySelectorAll(
-			".program-payee-input-section input[type='text']"
-		);
-		const moneyInputs = programCard.querySelectorAll(
-			".program-payee-input-section input[type='number']"
-		);
-		const removeBtnsLocal = programCard.querySelectorAll(".remove-payee-btn");
-
-		let idx = 0;
-		for (const [name, amount] of Object.entries(prog.payees)) {
-			inputs[idx].value = name;
-			moneyInputs[idx].value = amount;
-			removeBtnsLocal[idx].style.display = "inline-block";
-			idx++;
-		}
-		for (; idx < removeBtnsLocal.length; idx++)
-			removeBtnsLocal[idx].style.display = "none";
-
-		checkboxes[0].checked = prog.hasBeenPaid;
-		checkboxes[1].checked = prog.reportSubmitted;
-		notes.value = prog.notes;
-	});
-
-	saveBtn.addEventListener("click", () => {
-		editBtn.style.display = "inline-block";
-		saveBtn.style.display = "none";
-		cancelBtn.style.display = "none";
-		setEditable(false);
-		alert(`Changes saved for ${programCard.id}`);
-	});
-
+	// Setup add payee button
 	addBtn.addEventListener("click", () => {
 		const payeeContainer = programCard.querySelector(".payee-container");
 		const payeeCount =
@@ -180,6 +111,7 @@ function setupProgramButtons(programCard) {
 		});
 	});
 
+	// Setup existing remove buttons
 	removeBtns.forEach((btn) => {
 		btn.addEventListener("click", (e) => {
 			const parent = e.target.closest(".payee-item");
@@ -199,31 +131,165 @@ function updatePayeeLabels(container) {
 
 /**
  * ------------------------------
+ * SAVE CURRENT STATE
+ * ------------------------------
+ */
+function saveCurrentState() {
+	originalState = {
+		dean: deanInput.value,
+		pen: penInput.value,
+		loc: locInput.value,
+		chair: chairInput.value,
+		programs: [],
+	};
+
+	programsArray.forEach((program) => {
+		if (program.style.display !== "none") {
+			const programName = program.querySelector(".p-title").textContent;
+
+			const payees = {};
+			program.querySelectorAll(".payee-item").forEach((item) => {
+				const name = item.querySelector("input[type='text']").value.trim();
+				const amount = item.querySelector("input[type='number']").value;
+				if (name) payees[name] = amount;
+			});
+
+			const checkboxes = program.querySelectorAll(
+				".program-money-section input[type='checkbox']"
+			);
+			const notes = program.querySelector("textarea").value;
+
+			originalState.programs.push({
+				programName,
+				hasBeenPaid: checkboxes[0].checked,
+				reportSubmitted: checkboxes[1].checked,
+				notes,
+				payees,
+			});
+		}
+	});
+}
+
+/**
+ * ------------------------------
+ * RESTORE ORIGINAL STATE
+ * ------------------------------
+ */
+function restoreOriginalState() {
+	if (!originalState) return;
+
+	// Restore division-level inputs
+	deanInput.value = originalState.dean;
+	penInput.value = originalState.pen;
+	locInput.value = originalState.loc;
+	chairInput.value = originalState.chair;
+
+	// Restore each program
+	programsArray.forEach((program) => {
+		if (program.style.display !== "none") {
+			const programName = program.querySelector(".p-title").textContent;
+			const savedProgram = originalState.programs.find(
+				(p) => p.programName === programName
+			);
+
+			if (!savedProgram) return;
+
+			// Restore checkboxes
+			const checkboxes = program.querySelectorAll(
+				".program-money-section input[type='checkbox']"
+			);
+			checkboxes[0].checked = savedProgram.hasBeenPaid;
+			checkboxes[1].checked = savedProgram.reportSubmitted;
+
+			// Restore notes
+			const notes = program.querySelector("textarea");
+			notes.value = savedProgram.notes;
+
+			// Restore payees
+			const payeeContainer = program.querySelector(".payee-container");
+			const addBtn = payeeContainer.querySelector(".add-payee-btn");
+
+			// Remove all existing payee items
+			const existingPayees = payeeContainer.querySelectorAll(".payee-item");
+			existingPayees.forEach((item) => item.remove());
+
+			// Add back original payees
+			let payeeIndex = 1;
+			for (const [name, amount] of Object.entries(savedProgram.payees)) {
+				const newDiv = document.createElement("div");
+				newDiv.className = "payee-item";
+				newDiv.innerHTML = `
+					<label>Payee #${payeeIndex}</label>
+					<div class="program-payee-input-section grid">
+						<input type="text" value="${name}" disabled>
+						<input type="number" value="${amount}" disabled>
+						<button type="button" class="remove-payee-btn" disabled>Remove</button>
+					</div>
+				`;
+				payeeContainer.insertBefore(newDiv, addBtn);
+				payeeIndex++;
+			}
+		}
+	});
+
+	originalState = null;
+}
+
+/**
+ * ------------------------------
+ * SET FORM EDITABLE STATE
+ * ------------------------------
+ */
+function setFormEditable(editable) {
+	// Division-level inputs
+	deanInput.disabled = !editable;
+	penInput.disabled = !editable;
+	locInput.disabled = !editable;
+	chairInput.disabled = !editable;
+
+	// All visible programs
+	programsArray.forEach((program) => {
+		if (program.style.display !== "none") {
+			const payeeInputs = program.querySelectorAll(
+				".program-payee-input-section input"
+			);
+			const removeBtns = program.querySelectorAll(".remove-payee-btn");
+			const addBtn = program.querySelector(".add-payee-btn");
+			const checkboxes = program.querySelectorAll(
+				".program-money-section input[type='checkbox']"
+			);
+			const notes = program.querySelector("textarea");
+
+			payeeInputs.forEach((i) => (i.disabled = !editable));
+			removeBtns.forEach((b) => (b.disabled = !editable));
+			addBtn.disabled = !editable;
+			checkboxes.forEach((b) => (b.disabled = !editable));
+			notes.disabled = !editable;
+		}
+	});
+}
+
+/**
+ * ------------------------------
  * MASTER FORM BUTTONS
  * ------------------------------
  */
 editFormBtn.addEventListener("click", () => {
-	formEditing = true;
+	saveCurrentState();
+	setFormEditable(true);
+
 	editFormBtn.style.display = "none";
 	saveFormBtn.style.display = "inline-block";
 	cancelFormBtn.style.display = "inline-block";
-
-	programsArray.forEach((program) => {
-		if (program.style.display !== "none") {
-			program.querySelector(".program-edit-btn").disabled = false;
-		}
-	});
 });
 
 cancelFormBtn.addEventListener("click", () => {
-	formEditing = false;
+	restoreOriginalState();
+	setFormEditable(false);
+
 	editFormBtn.style.display = "inline-block";
 	saveFormBtn.style.display = "none";
 	cancelFormBtn.style.display = "none";
-
-	programsArray.forEach((program) => {
-		program.querySelector(".program-edit-btn").disabled = true;
-	});
 });
 
 /**
@@ -232,8 +298,6 @@ cancelFormBtn.addEventListener("click", () => {
  * ------------------------------
  */
 saveFormBtn.addEventListener("click", async () => {
-	formEditing = false;
-
 	const divisionName = divSelector.value;
 	if (!divisionName) return alert("Please select a division.");
 
@@ -286,13 +350,14 @@ saveFormBtn.addEventListener("click", async () => {
 		alert("Changes saved successfully!");
 
 		// Reset the form state
+		setFormEditable(false);
 		editFormBtn.style.display = "inline-block";
 		saveFormBtn.style.display = "none";
 		cancelFormBtn.style.display = "none";
+		originalState = null;
 
-		programsArray.forEach((program) => {
-			program.querySelector(".program-edit-btn").disabled = true;
-		});
+		// Reload the page to get fresh data from server
+		window.location.reload();
 	} catch (err) {
 		console.error(err);
 		alert("Error saving changes.");
