@@ -5,6 +5,7 @@ export class Program {
 		hasBeenPaid = false,
 		dateOfPayment = new Date(),
 		reportSubmitted = false,
+		underReview = false,
 		notes = ""
 	) {
 		this.programName = programName;
@@ -12,6 +13,7 @@ export class Program {
 		this.hasBeenPaid = hasBeenPaid;
 		this.dateOfPayment = dateOfPayment;
 		this.reportSubmitted = reportSubmitted;
+		this.underReview = underReview;
 		this.notes = notes;
 	}
 
@@ -34,6 +36,10 @@ export class Program {
 
 	getReportSubmitted() {
 		return this.reportSubmitted;
+	}
+
+	getUnderReview() {
+		return this.underReview;
 	}
 
 	getNotes() {
@@ -59,6 +65,10 @@ export class Program {
 
 	setReportSubmitted(reportSubmitted) {
 		this.reportSubmitted = reportSubmitted;
+	}
+
+	setUnderReview(underReview) {
+		this.underReview = underReview;
 	}
 
 	setNotes(notes) {
