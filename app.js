@@ -17,7 +17,7 @@ const pool = mysql2
 	})
 	.promise();
 
-const PORT = 3100;
+const PORT = 3200;
 
 app.set("view engine", "ejs");
 app.use(express.static("public"));
