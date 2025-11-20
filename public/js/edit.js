@@ -37,6 +37,7 @@ const chairInput = document.getElementById("chair-input");
 const editFormBtn = document.getElementById("edit-form-btn");
 const saveFormBtn = document.getElementById("save-form-btn");
 const cancelFormBtn = document.getElementById("cancel-form-btn");
+const showMoreBtn = document.getElementById("show-more-btn");
 
 /* ==============================
    DIVISION SELECTION HANDLER
@@ -56,6 +57,7 @@ divSelector.addEventListener("change", () => {
 
 	// Reveal edit button
 	editFormBtn.style.display = "inline-block";
+	showMoreBtn.style.display = "inline-block";
 
 	// Load all program cards for this division
 	showProgramCards(selectedDivision);
@@ -90,7 +92,7 @@ function showProgramCards(divisionName) {
 	division.programList.forEach((prog) => {
 		const safeId = `${prog.programName}-program`;
 		const programCard = document.getElementById(safeId);
-		if (programCard && !prog.underReview) {
+		if (programCard && prog.underReview) {
 			programCard.style.display = "block";
 			setupProgramButtons(programCard);
 		}
