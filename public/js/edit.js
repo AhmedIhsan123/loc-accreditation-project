@@ -53,8 +53,12 @@ divSelector.addEventListener("change", () => {
 	editFormBtn.style.display = "inline-block";
 	showMoreBtn.style.display = "inline-block";
 
-	// Load all program cards for this division
-	showProgramCards(selectedDivision);
+	// Load all program cards for this division if "Show More" is enabled; otherwise show only programs under review
+	if (showMoreBtn.value == "false") {
+		showProgramCards(selectedDivision, false);
+	} else {
+		showProgramCards(selectedDivision, true);
+	}
 
 	// Extract division-level info from the selected <option>
 	const option = divSelector.selectedOptions[0];
@@ -72,7 +76,7 @@ divSelector.addEventListener("change", () => {
  * Hides all program cards first, then selectively shows matching ones.
  * @param {string} divisionName
  */
-function showProgramCards(divisionName) {
+function showProgramCards(divisionName, showAll) {
 	// Hide all program cards
 	programsArray.forEach((program) => (program.style.display = "none"));
 
@@ -86,9 +90,16 @@ function showProgramCards(divisionName) {
 	division.programList.forEach((prog) => {
 		const safeId = `${prog.programName}-program`;
 		const programCard = document.getElementById(safeId);
-		if (programCard && prog.underReview) {
-			programCard.style.display = "block";
-			setupProgramButtons(programCard);
+		if (!showAll) {
+			if (programCard && prog.underReview) {
+				programCard.style.display = "block";
+				setupProgramButtons(programCard);
+			}
+		} else {
+			if (programCard) {
+				programCard.style.display = "block";
+				setupProgramButtons(programCard);
+			}
 		}
 	});
 }
@@ -494,6 +505,26 @@ cancelFormBtn.addEventListener("click", () => {
 	cancelFormBtn.style.display = "none";
 	addProgramBtn.style.display = "none";
 	returnBtn.style.display = "none";
+});
+
+/**
+ * Click handler for the "Show More" button.
+ * - Displays all programs; turns into "Show Less" button that hides all programs that are not under review
+ */
+showMoreBtn.addEventListener("click", () => {
+	const selectedDivision = divSelector.value;
+
+	if (showMoreBtn.value == "false") {
+		showProgramCards(selectedDivision, true);
+		showMoreBtn.textContent = "Show Less";
+		showMoreBtn.value = "true";
+		console.log("Switched to Show Less")
+	} else {
+		showProgramCards(selectedDivision, false);
+		showMoreBtn.textContent = "Show More";
+		showMoreBtn.value = "false";
+		console.log("Switched to Show More")
+	}
 });
 
 /**
