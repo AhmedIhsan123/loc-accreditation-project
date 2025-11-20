@@ -21,7 +21,9 @@
 		"dotenv": "^17.2.3",
 		"ejs": "^3.1.10",
 		"express": "^5.1.0",
-		"mysql2": "^3.15.3"
+		"mysql2": "^3.15.3",
+		"pdfkit": "^0.17.2",
+		"puppeteer": "^24.30.0"
 	},
 	"devDependencies": {
 		"nodemon": "^3.1.11"
