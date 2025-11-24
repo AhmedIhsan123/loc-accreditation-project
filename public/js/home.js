@@ -80,8 +80,12 @@ function fillCardData(card, division) {
 	// Add a View Form button that opens a modal with the division form
 	const viewBtn = document.createElement("button");
 	viewBtn.classList.add("view-form-btn");
+	viewBtn.style.zIndex = 999;
 	viewBtn.textContent = "View Form";
-	viewBtn.onclick = () => openDivisionModal(division);
+	viewBtn.onclick = (e) => {
+		e.stopPropagation();
+		openDivisionModal(division);
+	};
 	card.appendChild(viewBtn);
 }
 
