@@ -198,60 +198,6 @@ main {
 	background-color: var(--hover-color);
 }
 
-@media (max-width: 1600px) {
-	#division-cards-section {
-		grid-template-columns: repeat(4, 1fr);
-	}
-}
-
-@media (max-width: 1380px) {
-	main {
-		padding: 0;
-	}
-	.section {
-		border-radius: 0;
-	}
-	#page-container {
-		gap: 0;
-	}
-	#division-cards-section {
-		grid-template-columns: repeat(3, 1fr);
-	}
-}
-
-@media (max-width: 1200px) {
-	#division-cards-section {
-		grid-template-columns: repeat(2, 1fr);
-	}
-}
-
-@media (max-width: 800px) {
-	#page-container {
-		grid-template-areas:
-			"edit-form"
-			"changelog"
-			"version-history";
-	}
-}
-
-@media (max-width: 500px) {
-	body {
-		max-width: none;
-	}
-	main {
-		height: fit-content;
-	}
-	.section {
-		max-height: 600px;
-	}
-	#page-container {
-		grid-template-rows: auto;
-	}
-	#division-cards-section {
-		grid-template-columns: 1fr;
-	}
-}
-
 /* Modal backdrop */
 .modal-backdrop {
 	position: fixed;
@@ -333,6 +279,54 @@ main {
 .btn-small:hover {
 	background-color: #256d23;
 	color: #fff;
+}
+
+@media (max-width: 1600px) {
+	#division-cards-section {
+		grid-template-columns: repeat(4, 1fr);
+	}
+}
+
+@media (max-width: 1380px) {
+	main {
+		padding: 0;
+	}
+	.section {
+		border-radius: 0;
+	}
+	#page-container {
+		gap: 0;
+	}
+	#division-cards-section {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (max-width: 1200px) {
+	#division-cards-section {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 800px) {
+	body {
+		max-width: none;
+	}
+	main {
+		height: fit-content;
+	}
+	.section {
+		max-height: 600px;
+	}
+	#page-container {
+		grid-template-areas:
+			"edit-form"
+			"changelog";
+		grid-template-rows: auto;
+	}
+	#division-cards-section {
+		grid-template-columns: 1fr;
+	}
 }
 
 /* Media query for small screens */
