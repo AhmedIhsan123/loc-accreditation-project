@@ -1,9 +1,11 @@
-/* Page Layout */
+/* =============================
+   Global Layout
+   ============================= */
 body {
 	display: grid;
-	grid-template-rows: 10% 90%; /* Header takes 10%, rest of page takes 90% */
+	grid-template-rows: 10% 90%;
 	height: 100vh;
-	max-height: 100vh; /* Define a max height for safe sizing */
+	max-height: 100vh;
 }
 
 main {
@@ -14,24 +16,23 @@ main {
 #page-container {
 	display: grid;
 	grid-template-areas: "edit-form edit-form changelog";
-	grid-template-rows: auto;
 	gap: var(--gap-large);
 	height: 100%;
 }
 
-/* Class based styles */
+/* =============================
+   Section Base Styles
+   ============================= */
 .section {
 	display: flex;
 	flex-direction: column;
 	gap: 1rem;
 	padding: var(--padding-medium);
+	background-color: var(--background-color);
 	border-radius: var(--border-radius);
 	box-shadow: var(--box-shadow-dark);
-	background-color: var(--background-color);
-
-	/* Keep sections inside parent */
 	max-height: 100%;
-	overflow: hidden; /* or overflow-y: auto if content scrolls */
+	overflow: hidden;
 }
 
 .section-title {
@@ -45,11 +46,12 @@ main {
 	max-height: 100%;
 }
 
-/* Edit form section */
+/* =============================
+   Edit Form Section
+   ============================= */
 #edit-form-section {
 	grid-area: edit-form;
 	cursor: pointer;
-
 	transition: background-color 0.15s ease-in-out;
 }
 
@@ -57,7 +59,9 @@ main {
 	background-color: var(--hover-color);
 }
 
-/* Division cards section */
+/* =============================
+   Division Card Grid
+   ============================= */
 #division-cards-section {
 	display: grid;
 	gap: var(--gap-medium);
@@ -65,7 +69,59 @@ main {
 	height: 100%;
 }
 
-/* Ensure View Form buttons are on top of other card elements and receive pointer events */
+.div-card {
+	display: flex;
+	flex-direction: column;
+	background-color: var(--background-color);
+	box-shadow: var(--box-shadow-light);
+	text-align: center;
+	color: white;
+	height: 100%;
+}
+
+.card-title {
+	background-color: var(--primary-color);
+	padding: var(--padding-small);
+}
+
+/* Contacts */
+.card-contacts {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: var(--padding-small);
+	background-color: var(--background-color);
+	box-shadow: var(--box-shadow-light);
+	border-radius: var(--border-radius);
+	margin: 0.5rem;
+	color: var(--primary-color);
+	text-align: left;
+}
+
+/* Programs */
+.programs-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-small);
+	padding: var(--padding-small);
+}
+
+.program-card {
+	background-color: var(--background-color);
+	box-shadow: var(--box-shadow-light);
+	padding: var(--padding-small);
+	border-radius: var(--border-radius);
+	text-align: center;
+	font-size: small;
+	color: var(--primary-color);
+	transition: background-color 0.15s ease-in-out;
+}
+
+.program-card:hover {
+	background-color: var(--hover-color);
+}
+
+/* View Form Button */
 .view-form-btn {
 	position: relative;
 	z-index: 20;
@@ -79,27 +135,14 @@ main {
 	border-radius: 4px;
 }
 
-.card-title {
-	background-color: var(--primary-color);
-	padding: var(--padding-small);
-}
-
-.div-card {
-	display: flex;
-	flex-direction: column;
-	color: white;
-	text-align: center;
-	background-color: var(--background-color);
-	box-shadow: var(--box-shadow-light);
-	height: 100%;
-}
-
 #click-form-msg {
 	color: var(--secondary-color);
 	align-self: center;
 }
 
-/* Changelog section */
+/* =============================
+   Changelog Section
+   ============================= */
 #changelog-section {
 	grid-area: changelog;
 }
@@ -108,8 +151,6 @@ main {
 	list-style: none;
 	padding: 0;
 	margin: 0;
-	max-height: 100%;
-	overflow-y: auto;
 }
 
 .history-item {
@@ -145,7 +186,9 @@ main {
 	font-style: italic;
 }
 
-/* Version history section */
+/* =============================
+   Version History Section
+   ============================= */
 #version-history-section {
 	grid-area: version-history;
 }
@@ -158,47 +201,12 @@ main {
 .table-container table {
 	width: 100%;
 	border-collapse: collapse;
-	white-space: nowrap; /* prevents columns from wrapping */
+	white-space: nowrap;
 }
 
-/* Contacts inside division card */
-.card-contacts {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	padding: var(--padding-small);
-	background-color: var(--background-color);
-	box-shadow: var(--box-shadow-light);
-	border-radius: var(--border-radius);
-	margin: 0.5rem;
-	color: var(--primary-color);
-	text-align: left;
-}
-
-/* Individual program cards inside division card */
-.programs-container {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-small);
-	padding: var(--padding-small);
-}
-
-.program-card {
-	background-color: var(--background-color);
-	box-shadow: var(--box-shadow-light);
-	padding: var(--padding-small);
-	border-radius: var(--border-radius);
-	color: var(--primary-color);
-	text-align: center;
-	font-size: small;
-	transition: background-color 0.15s ease-in-out;
-}
-
-.program-card:hover {
-	background-color: var(--hover-color);
-}
-
-/* Modal backdrop */
+/* =============================
+   Modal Styles
+   ============================= */
 .modal-backdrop {
 	position: fixed;
 	inset: 0;
@@ -207,80 +215,71 @@ main {
 	pointer-events: auto;
 }
 
-/* Modal content */
 .modal-content {
 	position: fixed;
 	left: 50%;
 	top: 50%;
 	transform: translate(-50%, -50%);
 	background: #fff;
-	padding: 0;
 	max-width: 900px;
 	width: 95%;
 	max-height: 85vh;
-	overflow: visible;
 	border-radius: 6px;
 	display: flex;
 	flex-direction: column;
+	overflow: visible;
 	z-index: 1100;
 }
 
-/* Modal header */
 .modal-content > header {
 	position: sticky;
 	top: 0;
 	background: #fff;
-	z-index: 1200;
+	padding: 16px 20px;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	margin-bottom: 12px;
-	padding: 16px 20px;
+	z-index: 1200;
 }
 
-/* Modal body */
 #modal-body {
 	padding: 20px;
 	flex: 1;
 	overflow: auto;
 }
 
-/* Modal footer */
 .modal-content > footer {
 	display: flex;
 	justify-content: flex-end;
-	margin-top: 12px;
 	gap: 8px;
 	padding: 12px 20px;
 }
 
-/* PDF Preview */
 #pdf-preview-iframe {
-	display: block;
 	width: 100%;
 	height: 600px;
 	border: 1px solid #ccc;
 	margin-top: 16px;
-	background: #fff;
 }
 
-/* Small buttons */
 .btn-small {
-	background-color: var(--primary-color, #2c882b);
-	color: #fff;
+	background-color: var(--primary-color);
+	color: white;
 	border: none;
 	border-radius: 4px;
 	padding: 0.25rem 0.75rem;
 	font-size: 0.95rem;
 	cursor: pointer;
-	transition: background 0.2s, color 0.2s;
+	transition: background 0.2s;
 }
 
 .btn-small:hover {
 	background-color: #256d23;
-	color: #fff;
 }
 
+/* =============================
+   Responsive Layouts
+   ============================= */
 @media (max-width: 1600px) {
 	#division-cards-section {
 		grid-template-columns: repeat(4, 1fr);
@@ -291,12 +290,15 @@ main {
 	main {
 		padding: 0;
 	}
+
 	.section {
 		border-radius: 0;
 	}
+
 	#page-container {
 		gap: 0;
 	}
+
 	#division-cards-section {
 		grid-template-columns: repeat(3, 1fr);
 	}
@@ -309,38 +311,32 @@ main {
 }
 
 @media (max-width: 800px) {
-	body {
-		max-width: none;
-	}
 	main {
 		height: fit-content;
 	}
+
 	.section {
 		max-height: 600px;
 	}
+
 	#page-container {
 		grid-template-areas:
 			"edit-form"
 			"changelog";
-		grid-template-rows: auto;
 	}
+
 	#division-cards-section {
 		grid-template-columns: 1fr;
 	}
 }
 
-/* Media query for small screens */
 @media (max-width: 600px) {
 	.modal-content {
-		left: 50%;
-		top: 50%;
-		transform: translate(-50%, -50%);
 		width: 100%;
 		max-width: 100%;
 		height: 100vh;
 		max-height: 100vh;
 		border-radius: 0;
-		margin: 0;
 	}
 
 	.modal-content > header {
@@ -349,9 +345,6 @@ main {
 
 	#modal-body {
 		padding: 8px;
-		flex: 1 1 auto;
-		overflow: auto;
-		min-height: 0;
 	}
 
 	#pdf-preview-iframe {
