@@ -176,9 +176,7 @@ function embedDivisionPdfIframe(division) {
 
 	let url = "";
 	if (division.divisionName) {
-		url = `/pdf-preview?division=${encodeURIComponent(
-			division.divisionName
-		)}`;
+		url = `/pdf-preview?division=${encodeURIComponent(division.divisionName)}`;
 	}
 
 	const pdfContainer = document.createElement("div");
@@ -234,3 +232,8 @@ function renderPdfWithPdfjs(url, container) {
 		});
 	});
 }
+
+const editFormSection = document.getElementById("edit-form-section");
+editFormSection.addEventListener("click", () => {
+	window.location.href = "/edit";
+});
