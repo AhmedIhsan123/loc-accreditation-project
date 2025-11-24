@@ -13,10 +13,8 @@ main {
 
 #page-container {
 	display: grid;
-	grid-template-areas:
-		"edit-form edit-form changelog"
-		"version-history version-history version-history";
-	grid-template-rows: auto 30%; /* top row 300px min, bottom row 150px */
+	grid-template-areas: "edit-form edit-form changelog";
+	grid-template-rows: auto;
 	gap: var(--gap-large);
 	height: 100%;
 }
