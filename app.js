@@ -202,6 +202,12 @@ app.patch("/api/division/full-update", async (req, res) => {
 	try {
 		await connection.beginTransaction();
 
+		// Write a query to insert into the db
+		const sql = `INSERT INTO Changelog (save_time, changes)
+		VALUES (?,?)`;
+
+		let changesStr = "";
+
 		const { divisionName, dean, pen, loc, chair, programs, deletedPrograms } =
 			req.body;
 		console.log("Received update request for division:", divisionName);
@@ -246,12 +252,14 @@ app.patch("/api/division/full-update", async (req, res) => {
 						programID,
 					]);
 					console.log(`Deleted payees for program ${programName}`);
+					changesStr += `Deleted payees for program: ${programName}\n`;
 
 					// Delete the program itself
 					await connection.query("DELETE FROM Programs WHERE ID = ?", [
 						programID,
 					]);
 					console.log(`Deleted program ${programName} from DB`);
+					changesStr += `Deleted program: ${programName}\n`;
 				}
 			}
 		}
@@ -289,6 +297,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 					console.log(
 						`Updated person ID ${currentPersonID} from '${currentPersonName}' to '${name}'`
 					);
+					changesStr += `Updated person ID ${currentPersonID} from '${currentPersonName}' to '${name}\n`;
 				} else {
 					// Name hasn't changed
 					personID = currentPersonID;
@@ -311,6 +320,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 					);
 					personID = result.insertId;
 					console.log(`Created new person ${name} with ID:`, personID);
+					changesStr += `Created a new person ${name}\n`;
 				}
 
 				// Update division to point to this person
@@ -343,6 +353,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 				console.log(
 					`Updated existing program ${prog.programName} (ID: ${programID})`
 				);
+				changesStr += `Updated existing program ${prog.programName} (ID: ${programID})\n`;
 			} else {
 				const [result] = await connection.query(
 					`INSERT INTO Programs
@@ -361,6 +372,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 					`Inserted new program ${prog.programName} with ID:`,
 					programID
 				);
+				changesStr += `Inserted new program ${prog.programName} with ID: ${programID}\n`;
 			}
 
 			// --- Handle payees - IMPROVED LOGIC ---
@@ -387,6 +399,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 				]);
 			}
 			console.log("Deleted removed payees from DB for program ID:", programID);
+			changesStr += `Deleted removed payees from DB for program ID: ${programID}\n`;
 
 			// Insert or update each payee
 			for (const [name, amount] of Object.entries(prog.payees)) {
@@ -404,6 +417,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 						[amount, payeeRows[0].ID]
 					);
 					console.log(`Updated payee ${name} with amount ${amount}`);
+					changesStr += `Updated payee ${name} with amount ${amount}\n`;
 				} else {
 					// Insert new payee (ID will auto-increment)
 					await connection.query(
@@ -411,7 +425,16 @@ app.patch("/api/division/full-update", async (req, res) => {
 						[name, amount, programID]
 					);
 					console.log(`Inserted new payee ${name} with amount ${amount}`);
+					changesStr += `Inserted new payee ${name} with amount ${amount}\n`;
 				}
+			}
+
+			const params = [new Date(), changesStr];
+
+			try {
+				const [result] = await pool.execute(sql, params);
+			} catch (error) {
+				console.error("DB Error", error);
 			}
 		}
 
