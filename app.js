@@ -535,8 +535,8 @@ app.patch("/api/division/full-update", async (req, res) => {
 			summaryStr += `Created: ${createdPrograms.join(", ")}. `;
 		if (deletedProgramsList.length)
 			summaryStr += `Deleted: ${deletedProgramsList.join(", ")}. `;
-		if (changedPrograms.length)
-			summaryStr += `Modified: ${changedPrograms.join(", ")}. `;
+		// if (changedPrograms.length)
+		// summaryStr += `Modified: ${changedPrograms.join(", ")}. `;
 
 		await connection.query(
 			`INSERT INTO Changelog (save_time, changes) VALUES (?, ?)`,
