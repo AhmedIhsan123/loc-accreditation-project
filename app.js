@@ -96,8 +96,12 @@ app.get("/", (req, res) => {
 				}
 			});
 
+			const [rows2] = await pool.query(
+				`SELECT * FROM Changelog ORDER BY ID DESC`
+			);
+
 			const result = Object.values(divisionsMap);
-			res.render("home", { departments: result });
+			res.render("home", { departments: result, changelogs: rows2 });
 		} catch (err) {
 			console.error("Error fetching divisions for home:", err);
 			res.render("home", { departments: [] });

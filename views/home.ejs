@@ -9,10 +9,12 @@
 		<script src="//cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 		<%
 			const _serverDepartments = typeof departments !== 'undefined' ? departments : [];
+			const _changelogs = typeof changelogs !== 'undefined' ? changelogs : [];
 		%>
 		<script>
 			// Inject server departments (if provided) so client uses DB data instead of sample data
 			window.serverDepartments = <%- JSON.stringify(_serverDepartments) %>;
+			window.changelogs = <%- JSON.stringify(_changelogs) %>;
 		</script>
 		<script type="module" src="js/home.js"></script>
 
