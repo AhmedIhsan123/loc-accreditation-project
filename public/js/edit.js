@@ -607,7 +607,7 @@ editFormBtn.addEventListener("click", () => {
 	saveFormBtn.style.display = "inline-block";
 	cancelFormBtn.style.display = "inline-block";
 	addProgramBtn.style.display = "inline-block";
-	returnBtn.style.display = "inline-block";
+	returnBtn.style.display = "none";
 });
 
 /**
@@ -622,15 +622,17 @@ cancelFormBtn.addEventListener("click", () => {
 	saveFormBtn.style.display = "none";
 	cancelFormBtn.style.display = "none";
 	addProgramBtn.style.display = "none";
-	returnBtn.style.display = "none";
+	returnBtn.style.display = "inline-block";
 });
 
 /**
  * Click handler for the "Show More" button.
  * - Displays all programs; turns into "Show Less" button that hides all programs that are not under review
+ * - If in edit mode, ensures newly visible cards are editable
  */
 showMoreBtn.addEventListener("click", () => {
 	const selectedDivision = divSelector.value;
+	const isCurrentlyEditing = editFormBtn.style.display === "none"; // If edit btn is hidden, we're in edit mode
 
 	if (showMoreBtn.value == "false") {
 		showProgramCards(selectedDivision, true);
@@ -642,6 +644,11 @@ showMoreBtn.addEventListener("click", () => {
 		showMoreBtn.textContent = "Show More";
 		showMoreBtn.value = "false";
 		console.log("Switched to Show More");
+	}
+
+	// If we're currently in edit mode, apply edit state to the newly revealed cards
+	if (isCurrentlyEditing) {
+		setFormEditable(true);
 	}
 });
 
