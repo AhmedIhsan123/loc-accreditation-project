@@ -555,6 +555,9 @@ function setFormEditable(editable) {
 	locInput.disabled = !editable;
 	chairInput.disabled = !editable;
 
+	// Disable the div selector
+	divSelector.disabled = editable;
+
 	// Program-level controls (only for visible program cards)
 	// Query current DOM to get all programs including any rebuilt ones
 	const currentPrograms = document.querySelectorAll(".program");
