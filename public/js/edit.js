@@ -788,8 +788,6 @@ saveFormBtn.addEventListener("click", async () => {
 		});
 		if (!res.ok) throw new Error("Failed to save");
 
-		alert("Changes saved successfully!");
-
 		// Reset UI
 		setFormEditable(false);
 		editFormBtn.style.display = "inline-block";
@@ -801,10 +799,7 @@ saveFormBtn.addEventListener("click", async () => {
 		window.location.reload();
 	} catch (err) {
 		console.error(err);
-		alert("Error saving changes.");
 	}
-
-	window.location.href = "/"; // go to main page
 });
 
 /* ==============================
