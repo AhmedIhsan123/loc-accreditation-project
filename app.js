@@ -193,7 +193,7 @@ app.get("/edit", async (req, res) => {
 /**
  * ------------------------------
  * PATCH: Full update from frontend
- * Handles creation, updates, AND deletion of programs
+ * Handles creation, updates, deletion, AND moving of programs
  * ------------------------------
  */
 app.patch("/api/division/full-update", async (req, res) => {
@@ -202,12 +202,24 @@ app.patch("/api/division/full-update", async (req, res) => {
 	try {
 		await connection.beginTransaction();
 
-		const { divisionName, dean, pen, loc, chair, programs, deletedPrograms } =
-			req.body;
+		const { 
+			divisionName, 
+			dean, 
+			pen, 
+			loc, 
+			chair, 
+			programs, 
+			deletedPrograms,
+			movedPrograms,
+			renamedPrograms 
+		} = req.body;
+		
 		console.log("Received update request for division:", divisionName);
 		console.log("Division-level data:", { dean, pen, loc, chair });
 		console.log("Programs received:", programs);
 		console.log("Deleted programs:", deletedPrograms || []);
+		console.log("Moved programs:", movedPrograms || []);
+		console.log("Renamed programs:", renamedPrograms || []);
 
 		if (!divisionName) {
 			console.log("No division name provided!");
@@ -226,6 +238,123 @@ app.patch("/api/division/full-update", async (req, res) => {
 		}
 		const divisionID = divisionRows[0].ID;
 		console.log("Division ID:", divisionID);
+
+		// --- Handle renamed programs FIRST ---
+		if (renamedPrograms && renamedPrograms.length > 0) {
+			for (const renamedProgram of renamedPrograms) {
+				const { oldProgramName, programName, payees, hasBeenPaid, reportSubmitted, notes } = renamedProgram;
+
+				console.log(`Renaming program from "${oldProgramName}" to "${programName}"`);
+
+				// Find the program by old name
+				const [programRows] = await connection.query(
+					"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?",
+					[oldProgramName, divisionID]
+				);
+
+				if (programRows.length) {
+					const programID = programRows[0].ID;
+
+					// Update the program name and other fields
+					await connection.query(
+						`UPDATE Programs 
+						 SET program_name = ?, has_been_paid = ?, report_submitted = ?, notes = ?
+						 WHERE ID = ?`,
+						[programName, hasBeenPaid, reportSubmitted, notes, programID]
+					);
+
+					console.log(`Renamed program ID ${programID} from "${oldProgramName}" to "${programName}"`);
+
+					// Update payees
+					await connection.query(
+						"DELETE FROM Payees WHERE program_ID = ?",
+						[programID]
+					);
+
+					for (const [name, amount] of Object.entries(payees || {})) {
+						if (!name || name.trim() === "") continue;
+
+						await connection.query(
+							"INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)",
+							[name, amount, programID]
+						);
+					}
+				} else {
+					console.warn(`Program "${oldProgramName}" not found in division "${divisionName}"`);
+				}
+			}
+		}
+
+		// --- Handle moved programs FIRST (before deletions) ---
+		if (movedPrograms && movedPrograms.length > 0) {
+			for (const movedProgram of movedPrograms) {
+				const { 
+					targetDivision, 
+					programName, 
+					payees, 
+					hasBeenPaid, 
+					reportSubmitted, 
+					notes 
+				} = movedProgram;
+
+				console.log(`Moving program "${programName}" to "${targetDivision}"`);
+
+				// Find target division
+				const [targetDivRows] = await connection.query(
+					"SELECT ID FROM Divisions WHERE division_name = ?",
+					[targetDivision]
+				);
+
+				if (!targetDivRows.length) {
+					console.warn(`Target division "${targetDivision}" not found for program "${programName}"`);
+					continue; // Skip this move
+				}
+
+				const targetDivisionID = targetDivRows[0].ID;
+
+				// Find the program in the source division
+				const [programRows] = await connection.query(
+					"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?",
+					[programName, divisionID]
+				);
+
+				if (programRows.length) {
+					const programID = programRows[0].ID;
+
+					// Update the program to point to the new division
+					await connection.query(
+						`UPDATE Programs 
+						 SET division_ID = ?, has_been_paid = ?, report_submitted = ?, notes = ?
+						 WHERE ID = ?`,
+						[targetDivisionID, hasBeenPaid, reportSubmitted, notes, programID]
+					);
+
+					console.log(`Updated program ${programName} (ID: ${programID}) to division ${targetDivision}`);
+
+					// Update payees for the moved program
+					// First, delete existing payees
+					await connection.query(
+						"DELETE FROM Payees WHERE program_ID = ?",
+						[programID]
+					);
+
+					// Insert updated payees
+					for (const [name, amount] of Object.entries(payees || {})) {
+						if (!name || name.trim() === "") continue;
+
+						await connection.query(
+							"INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)",
+							[name, amount, programID]
+						);
+						console.log(`Inserted payee ${name} with amount ${amount} for moved program`);
+					}
+
+					console.log(`Successfully moved program "${programName}" from "${divisionName}" to "${targetDivision}"`);
+				} else {
+					console.warn(`Program "${programName}" not found in source division "${divisionName}"`);
+				}
+			}
+		}
 
 		// --- Delete removed programs ---
 		if (deletedPrograms && deletedPrograms.length > 0) {
@@ -363,7 +492,7 @@ app.patch("/api/division/full-update", async (req, res) => {
 				);
 			}
 
-			// --- Handle payees - IMPROVED LOGIC ---
+			// --- Handle payees ---
 			const incomingPayeeNames = Object.keys(prog.payees);
 			console.log("Incoming payee names from frontend:", incomingPayeeNames);
 
