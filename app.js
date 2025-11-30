@@ -367,6 +367,8 @@ app.patch("/api/division/full-update", async (req, res) => {
 			chair,
 			programs = [],
 			deletedPrograms = [],
+			movedPrograms = [],
+			renamedPrograms = []
 		} = req.body;
 		
 		console.log("Received update request for division:", divisionName);
