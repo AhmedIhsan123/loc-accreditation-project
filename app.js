@@ -1,3 +1,4 @@
+// server.js
 import express from "express";
 import mysql2 from "mysql2";
 import PDFDocument from "pdfkit";
@@ -30,7 +31,10 @@ const pool = mysql2
 		user: process.env.DB_USER,
 		password: process.env.DB_PASSWORD,
 		database: process.env.DB_NAME,
-		port: process.env.DB_PORT,
+		port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : undefined,
+		waitForConnections: true,
+		connectionLimit: 10,
+		queueLimit: 0,
 	})
 	.promise();
 
@@ -191,117 +195,267 @@ app.post("/logout", authenticateUser, (req, res) => {
 });
 
 /**
- * ------------------------------
- * GET: Home
- * ------------------------------
+ * Safely produce "?, ?, ?" placeholders for an array and return combined params.
  */
-app.get("/", authenticateUser, (req, res) => {
-	// Render home with server-side department data so modal and PDF match
-	(async () => {
-		try {
-			const [rows] = await pool.query(
-				`SELECT
-					d.division_name,
-					chair.person_name AS chair_name,
-					dean.person_name AS dean_name,
-					loc.person_name AS loc_rep,
-					pen.person_name AS pen_contact,
-					p.program_name,
-					p.has_been_paid,
-					p.report_submitted,
-					p.notes,
-					py.payee_name,
-					py.payee_amount AS amount
-				FROM Divisions d
-				LEFT JOIN Programs p ON d.ID = p.division_ID
-				LEFT JOIN Payees py ON p.ID = py.program_ID
-				LEFT JOIN Persons chair ON d.chair_ID = chair.ID
-				LEFT JOIN Persons dean ON d.dean_ID = dean.ID
-				LEFT JOIN Persons loc ON d.loc_ID = loc.ID
-				LEFT JOIN Persons pen ON d.pen_ID = pen.ID
-				ORDER BY d.division_name, p.program_name, py.payee_name`
-			);
+function placeholdersForArray(arr) {
+	if (!Array.isArray(arr) || arr.length === 0)
+		return { placeholders: "", params: [] };
+	return {
+		placeholders: arr.map(() => "?").join(","),
+		params: arr.slice(),
+	};
+}
 
-			const divisionsMap = {};
-			rows.forEach((row) => {
-				const divName = row.division_name;
-				const divId = row.division_ID || row.ID;
+/**
+ * Build a division object (used by edit / preview / download endpoints)
+ * Accepts rows returned from the DB for a single division (joined rows).
+ */
+function buildDivisionFromRows(rows, fallbackDivisionRow = null) {
+	const divisionsMap = {};
+	if (!rows || rows.length === 0) {
+		if (!fallbackDivisionRow) return null;
+		divisionsMap[fallbackDivisionRow.division_name] = {
+			divisionName: fallbackDivisionRow.division_name,
+			deanName: "",
+			penContact: "",
+			locRep: "",
+			chairName: "",
+			programList: [],
+		};
+	} else {
+		rows.forEach((row) => {
+			const divName =
+				row.division_name ||
+				(fallbackDivisionRow && fallbackDivisionRow.division_name);
+			if (!divisionsMap[divName]) {
+				divisionsMap[divName] = {
+					divisionName: divName,
+					deanName: row.dean_name || "",
+					penContact: row.pen_contact || "",
+					locRep: row.loc_rep || "",
+					chairName: row.chair_name || "",
+					programList: [],
+				};
+			}
 
-				if (!divisionsMap[divName]) {
-					divisionsMap[divName] = {
-						divisionName: divName,
-						id: divId,
-						deanName: row.dean_name || "",
-						penContact: row.pen_contact || "",
-						locRep: row.loc_rep || "",
-						chairName: row.chair_name || "",
-						programList: [],
+			if (row.program_name) {
+				let program = divisionsMap[divName].programList.find(
+					(p) => p.programName === row.program_name
+				);
+
+				if (!program) {
+					program = {
+						programName: row.program_name,
+						hasBeenPaid: Boolean(row.has_been_paid),
+						reportSubmitted: Boolean(row.report_submitted),
+						underReview: Boolean(row.under_review),
+						notes: row.notes || "",
+						payees: {},
 					};
+					divisionsMap[divName].programList.push(program);
 				}
 
-				if (row.program_name) {
-					let program = divisionsMap[divName].programList.find(
-						(p) => p.programName === row.program_name
-					);
-
-					if (!program) {
-						program = {
-							programName: row.program_name,
-							hasBeenPaid: Boolean(row.has_been_paid),
-							reportSubmitted: Boolean(row.report_submitted),
-							notes: row.notes || "",
-							payees: {},
-						};
-						divisionsMap[divName].programList.push(program);
-					}
-
-					if (row.payee_name) {
-						program.payees[row.payee_name] = parseFloat(row.amount);
-					}
+				if (row.payee_name) {
+					const amount =
+						row.amount === null || isNaN(parseFloat(row.amount))
+							? "To Be Determined"
+							: parseFloat(row.amount);
+					program.payees[row.payee_name] = amount;
 				}
-			});
+			}
+		});
+	}
 
-			const result = Object.values(divisionsMap);
-			res.render("home", { departments: result });
-		} catch (err) {
-			console.error("Error fetching divisions for home:", err);
-			res.render("home", { departments: [] });
-		}
-	})();
-});
+	return Object.values(divisionsMap)[0];
+}
+
+/**
+ * Tolerant lookup for a division by name.
+ * Tries exact (trim+lower), LIKE, and tokenized fuzzy match.
+ * Returns { row, id } or null if not found.
+ */
+async function findDivisionByNameTolerant(name) {
+	if (!name) return null;
+
+	// 1) exact match (trim + lower)
+	const [found] = await pool.query(
+		`SELECT * FROM Divisions WHERE TRIM(LOWER(division_name)) = TRIM(LOWER(?)) LIMIT 1`,
+		[name]
+	);
+	if (found && found.length) return found[0];
+
+	// 2) like contains
+	const likePattern = `%${name}%`;
+	const [likeFound] = await pool.query(
+		`SELECT * FROM Divisions WHERE division_name LIKE ? LIMIT 1`,
+		[likePattern]
+	);
+	if (likeFound && likeFound.length) return likeFound[0];
+
+	// 3) tokenized fuzzy (require all tokens present)
+	const tokens = name
+		.split(/[^A-Za-z0-9]+/)
+		.map((s) => s.trim())
+		.filter(Boolean)
+		.map((s) => s.toLowerCase());
+	if (tokens.length) {
+		const clauses = tokens
+			.map(() => "LOWER(division_name) LIKE ?")
+			.join(" AND ");
+		const params = tokens.map((t) => `%${t}%`);
+		const [multiFound] = await pool.query(
+			`SELECT * FROM Divisions WHERE ${clauses} LIMIT 1`,
+			params
+		);
+		if (multiFound && multiFound.length) return multiFound[0];
+	}
+
+	return null;
+}
+
+/**
+ * Get or create a person record; returns the person ID.
+ * Uses auto-increment for Persons table (recommended).
+ */
+async function getOrCreatePersonId(name, connectionOrPool = pool) {
+	if (!name || !name.trim()) return null;
+
+	// First attempt to find existing
+	const [personRows] = await connectionOrPool.query(
+		`SELECT ID FROM Persons WHERE person_name = ? LIMIT 1`,
+		[name]
+	);
+	if (personRows && personRows.length) return personRows[0].ID;
+
+	// Insert new person (use auto-increment)
+	const [result] = await connectionOrPool.query(
+		`INSERT INTO Persons (person_name) VALUES (?)`,
+		[name]
+	);
+	return result.insertId;
+}
 
 /**
  * ------------------------------
- * GET: Edit Page
+ * Routes
  * ------------------------------
+ */
+
+/**
+ * GET: Home (render departments + changelog)
+ */
+app.get("/", async (req, res) => {
+	try {
+		const [rows] = await pool.query(
+			`SELECT
+        d.ID AS division_ID,
+        d.division_name,
+        chair.person_name AS chair_name,
+        dean.person_name AS dean_name,
+        loc.person_name AS loc_rep,
+        pen.person_name AS pen_contact,
+        p.ID AS program_ID,
+        p.program_name,
+        p.has_been_paid,
+        p.report_submitted,
+        p.notes,
+        py.ID AS payee_ID,
+        py.payee_name,
+        py.payee_amount AS amount
+      FROM Divisions d
+      LEFT JOIN Programs p ON d.ID = p.division_ID
+      LEFT JOIN Payees py ON p.ID = py.program_ID
+      LEFT JOIN Persons chair ON d.chair_ID = chair.ID
+      LEFT JOIN Persons dean ON d.dean_ID = dean.ID
+      LEFT JOIN Persons loc ON d.loc_ID = loc.ID
+      LEFT JOIN Persons pen ON d.pen_ID = pen.ID
+      ORDER BY d.division_name, p.program_name, py.payee_name`
+		);
+
+		// Build divisions grouped by division_name
+		const divisionsMap = {};
+		rows.forEach((row) => {
+			const divName = row.division_name;
+			const divId = row.division_ID;
+
+			if (!divisionsMap[divName]) {
+				divisionsMap[divName] = {
+					divisionName: divName,
+					id: divId,
+					deanName: row.dean_name || "",
+					penContact: row.pen_contact || "",
+					locRep: row.loc_rep || "",
+					chairName: row.chair_name || "",
+					programList: [],
+				};
+			}
+
+			if (row.program_name) {
+				let program = divisionsMap[divName].programList.find(
+					(p) => p.programName === row.program_name
+				);
+
+				if (!program) {
+					program = {
+						programName: row.program_name,
+						hasBeenPaid: Boolean(row.has_been_paid),
+						reportSubmitted: Boolean(row.report_submitted),
+						notes: row.notes || "",
+						payees: {},
+					};
+					divisionsMap[divName].programList.push(program);
+				}
+
+				if (row.payee_name) {
+					program.payees[row.payee_name] = parseFloat(row.amount);
+				}
+			}
+		});
+
+		const [changelogRows] = await pool.query(
+			`SELECT * FROM Changelog ORDER BY ID DESC`
+		);
+
+		res.render("home", {
+			departments: Object.values(divisionsMap),
+			changelogs: changelogRows,
+		});
+	} catch (err) {
+		console.error("Error fetching divisions for home:", err);
+		res.status(500).render("home", { departments: [], changelogs: [] });
+	}
+});
+
+/**
+ * GET: Edit Page
  */
 app.get("/edit", async (req, res) => {
 	try {
 		const [rows] = await pool.query(
 			`SELECT
-				d.ID AS division_ID,
-				d.division_name,
-				chair.person_name AS chair_name,
-				dean.person_name AS dean_name,
-				loc.person_name AS loc_rep,
-				pen.person_name AS pen_contact,
-				p.ID AS program_ID,
-				p.program_name,
-				p.has_been_paid,
-				p.report_submitted,
-				p.under_review,
-				p.notes,
-				py.ID AS payee_ID,
-				py.payee_name,
-				py.payee_amount AS amount
-			FROM Divisions d
-			LEFT JOIN Programs p ON d.ID = p.division_ID
-			LEFT JOIN Payees py ON p.ID = py.program_ID
-			LEFT JOIN Persons chair ON d.chair_ID = chair.ID
-			LEFT JOIN Persons dean ON d.dean_ID = dean.ID
-			LEFT JOIN Persons loc ON d.loc_ID = loc.ID
-			LEFT JOIN Persons pen ON d.pen_ID = pen.ID
-			ORDER BY d.division_name, p.program_name, py.payee_name`
+        d.ID AS division_ID,
+        d.division_name,
+        chair.person_name AS chair_name,
+        dean.person_name AS dean_name,
+        loc.person_name AS loc_rep,
+        pen.person_name AS pen_contact,
+        p.ID AS program_ID,
+        p.program_name,
+        p.has_been_paid,
+        p.report_submitted,
+        p.under_review,
+        p.notes,
+        py.ID AS payee_ID,
+        py.payee_name,
+        py.payee_amount AS amount
+      FROM Divisions d
+      LEFT JOIN Programs p ON d.ID = p.division_ID
+      LEFT JOIN Payees py ON p.ID = py.program_ID
+      LEFT JOIN Persons chair ON d.chair_ID = chair.ID
+      LEFT JOIN Persons dean ON d.dean_ID = dean.ID
+      LEFT JOIN Persons loc ON d.loc_ID = loc.ID
+      LEFT JOIN Persons pen ON d.pen_ID = pen.ID
+      ORDER BY d.division_name, p.program_name, py.payee_name`
 		);
 
 		const divisionsMap = {};
@@ -347,8 +501,7 @@ app.get("/edit", async (req, res) => {
 			}
 		});
 
-		const result = Object.values(divisionsMap);
-		res.render("edit", { departments: result });
+		res.render("edit", { departments: Object.values(divisionsMap) });
 	} catch (error) {
 		console.error("Error fetching divisions for edit:", error);
 		res.status(500).render("edit", { departments: [] });
@@ -358,231 +511,327 @@ app.get("/edit", async (req, res) => {
 /**
  * ------------------------------
  * PATCH: Full update from frontend
- * Handles creation, updates, AND deletion of programs
+ * Handles creation, updates, deletion, AND moving of programs
  * ------------------------------
  */
 app.patch("/api/division/full-update", async (req, res) => {
 	const connection = await pool.getConnection();
-
 	try {
 		await connection.beginTransaction();
 
-		const { divisionName, dean, pen, loc, chair, programs, deletedPrograms } =
-			req.body;
+		const {
+			divisionName,
+			dean,
+			pen,
+			loc,
+			chair,
+			programs = [],
+			deletedPrograms = [],
+		} = req.body;
+		
 		console.log("Received update request for division:", divisionName);
 		console.log("Division-level data:", { dean, pen, loc, chair });
 		console.log("Programs received:", programs);
 		console.log("Deleted programs:", deletedPrograms || []);
+		console.log("Moved programs:", movedPrograms || []);
+		console.log("Renamed programs:", renamedPrograms || []);
 
 		if (!divisionName) {
-			console.log("No division name provided!");
+			await connection.rollback();
 			return res.status(400).json({ error: "Division name is required" });
 		}
 
-		// --- Get division ID ---
+		// Get division ID
 		const [divisionRows] = await connection.query(
-			"SELECT ID FROM Divisions WHERE division_name = ?",
+			"SELECT ID FROM Divisions WHERE division_name = ? LIMIT 1",
 			[divisionName]
 		);
 		if (!divisionRows.length) {
-			console.log("Division not found in DB:", divisionName);
 			await connection.rollback();
 			return res.status(404).json({ error: "Division not found" });
 		}
 		const divisionID = divisionRows[0].ID;
+
+		const createdPrograms = [];
+		const changedPrograms = [];
+		const deletedProgramsList = [];
 		console.log("Division ID:", divisionID);
 
-		// --- Delete removed programs ---
-		if (deletedPrograms && deletedPrograms.length > 0) {
-			for (const programName of deletedPrograms) {
-				console.log("Deleting program:", programName);
+		// --- Handle renamed programs FIRST ---
+		if (renamedPrograms && renamedPrograms.length > 0) {
+			for (const renamedProgram of renamedPrograms) {
+				const { oldProgramName, programName, payees, hasBeenPaid, reportSubmitted, notes } = renamedProgram;
 
-				// First get the program ID
-				const [progRows] = await connection.query(
+				console.log(`Renaming program from "${oldProgramName}" to "${programName}"`);
+
+				// Find the program by old name
+				const [programRows] = await connection.query(
+					"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?",
+					[oldProgramName, divisionID]
+				);
+
+				if (programRows.length) {
+					const programID = programRows[0].ID;
+
+					// Update the program name and other fields
+					await connection.query(
+						`UPDATE Programs 
+						 SET program_name = ?, has_been_paid = ?, report_submitted = ?, notes = ?
+						 WHERE ID = ?`,
+						[programName, hasBeenPaid, reportSubmitted, notes, programID]
+					);
+
+					console.log(`Renamed program ID ${programID} from "${oldProgramName}" to "${programName}"`);
+
+					// Update payees
+					await connection.query(
+						"DELETE FROM Payees WHERE program_ID = ?",
+						[programID]
+					);
+
+					for (const [name, amount] of Object.entries(payees || {})) {
+						if (!name || name.trim() === "") continue;
+
+						await connection.query(
+							"INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)",
+							[name, amount, programID]
+						);
+					}
+				} else {
+					console.warn(`Program "${oldProgramName}" not found in division "${divisionName}"`);
+				}
+			}
+		}
+
+		// --- Handle moved programs FIRST (before deletions) ---
+		if (movedPrograms && movedPrograms.length > 0) {
+			for (const movedProgram of movedPrograms) {
+				const { 
+					targetDivision, 
+					programName, 
+					payees, 
+					hasBeenPaid, 
+					reportSubmitted, 
+					notes 
+				} = movedProgram;
+
+				console.log(`Moving program "${programName}" to "${targetDivision}"`);
+
+				// Find target division
+				const [targetDivRows] = await connection.query(
+					"SELECT ID FROM Divisions WHERE division_name = ?",
+					[targetDivision]
+				);
+
+				if (!targetDivRows.length) {
+					console.warn(`Target division "${targetDivision}" not found for program "${programName}"`);
+					continue; // Skip this move
+				}
+
+				const targetDivisionID = targetDivRows[0].ID;
+
+				// Find the program in the source division
+				const [programRows] = await connection.query(
 					"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?",
 					[programName, divisionID]
 				);
 
-				if (progRows.length) {
-					const programID = progRows[0].ID;
+				if (programRows.length) {
+					const programID = programRows[0].ID;
 
-					// Delete payees for this program
-					await connection.query("DELETE FROM Payees WHERE program_ID = ?", [
-						programID,
-					]);
-					console.log(`Deleted payees for program ${programName}`);
+					// Update the program to point to the new division
+					await connection.query(
+						`UPDATE Programs 
+						 SET division_ID = ?, has_been_paid = ?, report_submitted = ?, notes = ?
+						 WHERE ID = ?`,
+						[targetDivisionID, hasBeenPaid, reportSubmitted, notes, programID]
+					);
 
-					// Delete the program itself
-					await connection.query("DELETE FROM Programs WHERE ID = ?", [
-						programID,
-					]);
-					console.log(`Deleted program ${programName} from DB`);
+					console.log(`Updated program ${programName} (ID: ${programID}) to division ${targetDivision}`);
+
+					// Update payees for the moved program
+					// First, delete existing payees
+					await connection.query(
+						"DELETE FROM Payees WHERE program_ID = ?",
+						[programID]
+					);
+
+					// Insert updated payees
+					for (const [name, amount] of Object.entries(payees || {})) {
+						if (!name || name.trim() === "") continue;
+
+						await connection.query(
+							"INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)",
+							[name, amount, programID]
+						);
+						console.log(`Inserted payee ${name} with amount ${amount} for moved program`);
+					}
+
+					console.log(`Successfully moved program "${programName}" from "${divisionName}" to "${targetDivision}"`);
+				} else {
+					console.warn(`Program "${programName}" not found in source division "${divisionName}"`);
 				}
 			}
 		}
 
-		// --- Update division persons ---
+		// Delete removed programs (and their payees)
+		if (Array.isArray(deletedPrograms) && deletedPrograms.length > 0) {
+			for (const programName of deletedPrograms) {
+				const [progRows] = await connection.query(
+					"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ? LIMIT 1",
+					[programName, divisionID]
+				);
+				if (progRows.length) {
+					const programID = progRows[0].ID;
+					await connection.query("DELETE FROM Payees WHERE program_ID = ?", [
+						programID,
+					]);
+					await connection.query("DELETE FROM Programs WHERE ID = ?", [
+						programID,
+					]);
+					deletedProgramsList.push(programName);
+				}
+			}
+		}
+
+		// Update division persons (chair, dean, loc, pen)
 		const personMap = { chair, dean, loc, pen };
 		for (const [role, name] of Object.entries(personMap)) {
 			if (!name) continue;
-			console.log(`Processing ${role}: ${name}`);
 
-			// Get the current person ID for this role in the division
+			// Get current person ID for this role
 			const [currentDivision] = await connection.query(
-				`SELECT ${role}_ID FROM Divisions WHERE ID = ?`,
+				`SELECT ${role}_ID FROM Divisions WHERE ID = ? LIMIT 1`,
 				[divisionID]
 			);
 			const currentPersonID = currentDivision[0][`${role}_ID`];
 
-			let personID;
-
 			if (currentPersonID) {
-				// Get the current person's name
+				// Fetch the existing person's name
 				const [currentPerson] = await connection.query(
-					"SELECT person_name FROM Persons WHERE ID = ?",
+					"SELECT person_name FROM Persons WHERE ID = ? LIMIT 1",
 					[currentPersonID]
 				);
 				const currentPersonName = currentPerson[0]?.person_name;
-
 				if (currentPersonName !== name) {
-					// Name has changed - update the person record
+					// Update existing person record
 					await connection.query(
 						"UPDATE Persons SET person_name = ? WHERE ID = ?",
 						[name, currentPersonID]
 					);
-					personID = currentPersonID;
-					console.log(
-						`Updated person ID ${currentPersonID} from '${currentPersonName}' to '${name}'`
-					);
-				} else {
-					// Name hasn't changed
-					personID = currentPersonID;
-					console.log(`Person ${name} unchanged (ID: ${personID})`);
 				}
+				// nothing else needed (division already points to this ID)
 			} else {
-				// No current person assigned - check if this person exists or create new
-				let [personRows] = await connection.query(
-					"SELECT ID FROM Persons WHERE person_name = ?",
-					[name]
-				);
-
-				if (personRows.length) {
-					personID = personRows[0].ID;
-					console.log(`Found existing person ${name} with ID:`, personID);
-				} else {
-					const [result] = await connection.query(
-						"INSERT INTO Persons (person_name) VALUES (?)",
-						[name]
-					);
-					personID = result.insertId;
-					console.log(`Created new person ${name} with ID:`, personID);
-				}
-
-				// Update division to point to this person
+				// No current person assigned: get or create and update division role column
+				const personID = await getOrCreatePersonId(name, connection);
 				await connection.query(
 					`UPDATE Divisions SET ${role}_ID = ? WHERE ID = ?`,
 					[personID, divisionID]
 				);
-				console.log(`Updated division ${divisionID} ${role}_ID to`, personID);
 			}
 		}
 
-		// --- Handle remaining programs (create/update) ---
+		// Create / Update programs and their payees
 		for (const prog of programs) {
-			console.log("Processing program:", prog.programName);
+			if (!prog.programName) continue;
 
 			const [progRows] = await connection.query(
-				"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?",
+				"SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ? LIMIT 1",
 				[prog.programName, divisionID]
 			);
 
 			let programID;
 			if (progRows.length) {
 				programID = progRows[0].ID;
+				// Update program fields
 				await connection.query(
-					`UPDATE Programs
-					 SET has_been_paid = ?, report_submitted = ?, notes = ?
-					 WHERE ID = ?`,
-					[prog.hasBeenPaid, prog.reportSubmitted, prog.notes, programID]
-				);
-				console.log(
-					`Updated existing program ${prog.programName} (ID: ${programID})`
+					`UPDATE Programs SET has_been_paid = ?, report_submitted = ?, notes = ? WHERE ID = ?`,
+					[
+						prog.hasBeenPaid ? 1 : 0,
+						prog.reportSubmitted ? 1 : 0,
+						prog.notes || "",
+						programID,
+					]
 				);
 			} else {
-				const [result] = await connection.query(
-					`INSERT INTO Programs
-					 (program_name, division_ID, has_been_paid, report_submitted, notes)
-					 VALUES (?, ?, ?, ?, ?)`,
+				const [insertResult] = await connection.query(
+					`INSERT INTO Programs (program_name, division_ID, has_been_paid, report_submitted, notes)
+           VALUES (?, ?, ?, ?, ?)`,
 					[
 						prog.programName,
 						divisionID,
-						prog.hasBeenPaid,
-						prog.reportSubmitted,
-						prog.notes,
+						prog.hasBeenPaid ? 1 : 0,
+						prog.reportSubmitted ? 1 : 0,
+						prog.notes || "",
 					]
 				);
-				programID = result.insertId;
-				console.log(
-					`Inserted new program ${prog.programName} with ID:`,
-					programID
-				);
+				programID = insertResult.insertId;
+				createdPrograms.push(prog.programName);
 			}
 
-			// --- Handle payees - IMPROVED LOGIC ---
-			const incomingPayeeNames = Object.keys(prog.payees);
-			console.log("Incoming payee names from frontend:", incomingPayeeNames);
+			// Handle payees: remove ones not present in incoming payees, then upsert incoming
+			const incomingPayeeNames = prog.payees ? Object.keys(prog.payees) : [];
 
-			// Get existing payees for this program
-			const [existingPayees] = await connection.query(
-				"SELECT ID, payee_name, payee_amount FROM Payees WHERE program_ID = ?",
-				[programID]
-			);
-			console.log("Existing payees in DB:", existingPayees);
-
-			// Delete payees that are no longer in the incoming data
+			// Delete payees that are not in incoming list
 			if (incomingPayeeNames.length > 0) {
+				const { placeholders, params } =
+					placeholdersForArray(incomingPayeeNames);
+				// params spread after programID
 				await connection.query(
-					"DELETE FROM Payees WHERE program_ID = ? AND payee_name NOT IN (?)",
-					[programID, incomingPayeeNames]
+					`DELETE FROM Payees WHERE program_ID = ? AND payee_name NOT IN (${placeholders})`,
+					[programID, ...params]
 				);
 			} else {
-				// If no incoming payees, delete all payees for this program
+				// No incoming payees: delete all for this program
 				await connection.query("DELETE FROM Payees WHERE program_ID = ?", [
 					programID,
 				]);
 			}
-			console.log("Deleted removed payees from DB for program ID:", programID);
 
-			// Insert or update each payee
-			for (const [name, amount] of Object.entries(prog.payees)) {
-				if (!name || name.trim() === "") continue; // Skip empty names
+			// Insert or update incoming payees
+			for (const [payeeName, amountRaw] of Object.entries(prog.payees || {})) {
+				if (!payeeName || !String(payeeName).trim()) continue;
+
+				const amount =
+					amountRaw === null || amountRaw === undefined || amountRaw === ""
+						? null
+						: Number(amountRaw);
 
 				const [payeeRows] = await connection.query(
-					"SELECT ID FROM Payees WHERE program_ID = ? AND payee_name = ?",
-					[programID, name]
+					"SELECT ID FROM Payees WHERE program_ID = ? AND payee_name = ? LIMIT 1",
+					[programID, payeeName]
 				);
 
 				if (payeeRows.length) {
-					// Update existing payee
 					await connection.query(
 						"UPDATE Payees SET payee_amount = ? WHERE ID = ?",
 						[amount, payeeRows[0].ID]
 					);
-					console.log(`Updated payee ${name} with amount ${amount}`);
 				} else {
-					// Insert new payee (ID will auto-increment)
 					await connection.query(
 						"INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)",
-						[name, amount, programID]
+						[payeeName, amount, programID]
 					);
-					console.log(`Inserted new payee ${name} with amount ${amount}`);
 				}
 			}
 		}
 
+		// Insert changelog entry summarizing changes
+		let summaryStr = `Division: ${divisionName}. `;
+		if (createdPrograms.length)
+			summaryStr += `Created: ${createdPrograms.join(", ")}. `;
+		if (deletedProgramsList.length)
+			summaryStr += `Deleted: ${deletedProgramsList.join(", ")}. `;
+		if (changedPrograms.length)
+			summaryStr += `Modified: ${changedPrograms.join(", ")}. `;
+
+		await connection.query(
+			`INSERT INTO Changelog (save_time, changes) VALUES (?, ?)`,
+			[new Date(), summaryStr]
+		);
+
 		await connection.commit();
-		console.log("Full update finished successfully.");
-		res.json({ success: true });
+		res.json({ success: true, summary: summaryStr });
 	} catch (err) {
 		await connection.rollback();
 		console.error("Error during full update:", err);
@@ -594,427 +843,167 @@ app.patch("/api/division/full-update", async (req, res) => {
 	}
 });
 
-// Stream a PDF for a single division for modal preview. Call as: /pdf-preview?division=Division%20Name
+/**
+ * Helper: generate PDF stream (used by preview and download)
+ * - disposition can be "inline" (preview) or "attachment" (download)
+ */
+async function streamDivisionPdfById(res, divisionId, disposition = "inline") {
+	const [rows] = await pool.query(
+		`SELECT
+      d.division_name,
+      chair.person_name AS chair_name,
+      dean.person_name AS dean_name,
+      loc.person_name AS loc_rep,
+      pen.person_name AS pen_contact,
+      p.program_name,
+      p.has_been_paid,
+      p.report_submitted,
+      p.notes,
+      py.payee_name,
+      py.payee_amount AS amount
+    FROM Divisions d
+    LEFT JOIN Programs p ON d.ID = p.division_ID
+    LEFT JOIN Payees py ON p.ID = py.program_ID
+    LEFT JOIN Persons chair ON d.chair_ID = chair.ID
+    LEFT JOIN Persons dean ON d.dean_ID = dean.ID
+    LEFT JOIN Persons loc ON d.loc_ID = loc.ID
+    LEFT JOIN Persons pen ON d.pen_ID = pen.ID
+    WHERE d.ID = ?
+    ORDER BY p.program_name, py.payee_name`,
+		[divisionId]
+	);
+
+	// If no rows, try to load the division row alone to get division name
+	let divisionRow = null;
+	if (!rows || rows.length === 0) {
+		const [divOnly] = await pool.query(
+			`SELECT * FROM Divisions WHERE ID = ? LIMIT 1`,
+			[divisionId]
+		);
+		divisionRow = divOnly && divOnly.length ? divOnly[0] : null;
+	}
+
+	const division = buildDivisionFromRows(rows, divisionRow);
+	if (!division) {
+		res.status(404).send("Division not found or has no data");
+		return;
+	}
+
+	const filename = `${division.divisionName.replace(/\s+/g, "_")}.pdf`;
+	res.setHeader("Content-Type", "application/pdf");
+	res.setHeader(
+		"Content-Disposition",
+		`${disposition}; filename="${filename}"`
+	);
+
+	const doc = new PDFDocument({ margin: 50 });
+	doc.pipe(res);
+
+	// Title
+	doc.fontSize(20).font("Helvetica-Bold").text(division.divisionName);
+	doc.moveDown(0.5);
+
+	// Contacts
+	doc.fontSize(12);
+	doc.font("Helvetica-Bold").text(`Dean: ${division.deanName || ""}`);
+	doc.moveDown(0.12);
+	doc.font("Helvetica-Bold").text(`Chair: ${division.chairName || ""}`);
+	doc.moveDown(0.12);
+	doc.font("Helvetica-Bold").text(`PEN Contact: ${division.penContact || ""}`);
+	doc.moveDown(0.12);
+	doc.font("Helvetica-Bold").text(`LOC Rep: ${division.locRep || ""}`);
+	doc.moveDown(0.3);
+
+	// Programs
+	doc.moveDown(0.5);
+	if (division.programList && division.programList.length) {
+		doc.font("Helvetica-Bold").fontSize(14).text("Programs");
+		doc.moveDown(0.25);
+
+		division.programList.forEach((p) => {
+			doc.font("Helvetica-Bold").fontSize(13).text(p.programName);
+			doc.moveDown(0.15);
+
+			const payeeNames = p.payees ? Object.keys(p.payees) : [];
+			if (payeeNames.length) {
+				payeeNames.forEach((payee) => {
+					const amount = p.payees[payee];
+					const displayAmount =
+						typeof amount === "string" ? amount : `$${amount}`;
+					doc
+						.font("Helvetica")
+						.fontSize(12)
+						.text(`• ${payee}: ${displayAmount}`, {
+							indent: 16,
+						});
+				});
+			}
+
+			if (p.notes) {
+				doc.moveDown(0.1);
+				doc
+					.font("Helvetica-Oblique")
+					.fontSize(11)
+					.text(`Notes: ${p.notes}`, { indent: 16 });
+			}
+
+			doc.moveDown(0.4);
+		});
+	} else {
+		doc.font("Helvetica-Bold").fontSize(14).text("Programs");
+		doc.moveDown(0.5);
+		doc.font("Helvetica").fontSize(12).text("No programs available.");
+	}
+
+	doc.end();
+}
+
+/**
+ * GET: PDF preview (inline)
+ * Call: /pdf-preview?division=Division%20Name
+ */
 app.get("/pdf-preview", async (req, res) => {
 	const divisionName = req.query.division;
 	if (!divisionName)
 		return res.status(400).send("Query parameter 'division' is required");
 
 	try {
-		// Try to find the division by a tolerant match (trim + lower) to avoid issues with spacing/case
-		const [found] = await pool.query(
-			`SELECT * FROM Divisions WHERE TRIM(LOWER(division_name)) = TRIM(LOWER(?)) LIMIT 1`,
-			[divisionName]
-		);
-
-		let divisionRow = found && found.length ? found[0] : null;
-
-		// If not found, try a LIKE search as a second chance (contains)
+		const divisionRow = await findDivisionByNameTolerant(divisionName);
 		if (!divisionRow) {
-			const likePattern = `%${divisionName}%`;
-			const [likeFound] = await pool.query(
-				`SELECT * FROM Divisions WHERE division_name LIKE ? LIMIT 1`,
-				[likePattern]
-			);
-			divisionRow = likeFound && likeFound.length ? likeFound[0] : null;
-		}
-
-		// If still not found, try splitting the requested name into tokens and require all tokens be present (fuzzy match)
-		if (!divisionRow) {
-			const tokens = divisionName
-				.split(/[^A-Za-z0-9]+/)
-				.map((s) => s.trim())
-				.filter(Boolean)
-				.map((s) => s.toLowerCase());
-			if (tokens.length) {
-				const clauses = tokens
-					.map(() => "LOWER(division_name) LIKE ?")
-					.join(" AND ");
-				const params = tokens.map((t) => `%${t}%`);
-				const [multiFound] = await pool.query(
-					`SELECT * FROM Divisions WHERE ${clauses} LIMIT 1`,
-					params
-				);
-				divisionRow = multiFound && multiFound.length ? multiFound[0] : null;
-			}
-		}
-
-		if (!divisionRow) {
-			console.warn(`Division not found: '${divisionName}'`);
 			return res.status(404).send("Division not found or has no data");
 		}
-
-		// Use the division ID for subsequent queries to avoid name-matching issues
-		const divisionId = divisionRow.ID;
-
-		const [rows] = await pool.query(
-			`SELECT
-				d.division_name,
-				chair.person_name AS chair_name,
-				dean.person_name AS dean_name,
-				loc.person_name AS loc_rep,
-				pen.person_name AS pen_contact,
-				p.program_name,
-				p.has_been_paid,
-				p.report_submitted,
-				p.notes,
-				py.payee_name,
-				py.payee_amount AS amount
-			FROM Divisions d
-			LEFT JOIN Programs p ON d.ID = p.division_ID
-			LEFT JOIN Payees py ON p.ID = py.program_ID
-			LEFT JOIN Persons chair ON d.chair_ID = chair.ID
-			LEFT JOIN Persons dean ON d.dean_ID = dean.ID
-			LEFT JOIN Persons loc ON d.loc_ID = loc.ID
-			LEFT JOIN Persons pen ON d.pen_ID = pen.ID
-			WHERE d.ID = ?
-			ORDER BY p.program_name, py.payee_name`,
-			[divisionId]
-		);
-
-		// Build division object from rows (similar to /edit handler)
-		const divisionsMap = {};
-		// If there are no rows returned but we have a divisionRow, create a minimal representation
-		if (!rows || rows.length === 0) {
-			divisionsMap[divisionRow.division_name] = {
-				divisionName: divisionRow.division_name,
-				deanName: "",
-				penContact: "",
-				locRep: "",
-				chairName: "",
-				programList: [],
-			};
-		} else {
-			rows.forEach((row) => {
-				const divName = row.division_name || divisionRow.division_name;
-				if (!divisionsMap[divName]) {
-					divisionsMap[divName] = {
-						divisionName: divName,
-						deanName: row.dean_name || "",
-						penContact: row.pen_contact || "",
-						locRep: row.loc_rep || "",
-						chairName: row.chair_name || "",
-						programList: [],
-					};
-				}
-
-				if (row.program_name) {
-					let program = divisionsMap[divName].programList.find(
-						(p) => p.programName === row.program_name
-					);
-
-					if (!program) {
-						program = {
-							programName: row.program_name,
-							hasBeenPaid: Boolean(row.has_been_paid),
-							reportSubmitted: Boolean(row.report_submitted),
-							notes: row.notes || "",
-							payees: {},
-						};
-						divisionsMap[divName].programList.push(program);
-					}
-
-					if (row.payee_name) {
-						const amount =
-							row.amount === null || isNaN(parseFloat(row.amount))
-								? "To Be Determined"
-								: parseFloat(row.amount);
-						program.payees[row.payee_name] = amount;
-					}
-				}
-			});
-		}
-
-		const division = Object.values(divisionsMap)[0];
-
-		// Stream PDF using PDFKit with inline disposition for modal preview
-		const filename = `${division.divisionName.replace(/\s+/g, "_")}.pdf`;
-		res.setHeader("Content-Type", "application/pdf");
-		res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
-
-		const doc = new PDFDocument({ margin: 50 });
-		doc.pipe(res);
-
-		// Title
-		doc.fontSize(20).font("Helvetica-Bold").text(division.divisionName);
-		doc.moveDown(0.5);
-
-		// Contacts: write each contact on its own line with a small gap to avoid overlap
-		doc.fontSize(12);
-		doc.font("Helvetica-Bold").text(`Dean: ${division.deanName || ""}`);
-		doc.moveDown(0.12);
-		doc.font("Helvetica-Bold").text(`Chair: ${division.chairName || ""}`);
-		doc.moveDown(0.12);
-		doc
-			.font("Helvetica-Bold")
-			.text(`PEN Contact: ${division.penContact || ""}`);
-		doc.moveDown(0.12);
-		doc.font("Helvetica-Bold").text(`LOC Rep: ${division.locRep || ""}`);
-		doc.moveDown(0.3);
-
-		doc.moveDown(0.5);
-
-		// Programs header
-		if (division.programList && division.programList.length) {
-			doc.font("Helvetica-Bold").fontSize(14).text("Programs");
-			doc.moveDown(0.25);
-
-			division.programList.forEach((p) => {
-				// Program name
-				doc.font("Helvetica-Bold").fontSize(13).text(p.programName);
-				doc.moveDown(0.15);
-
-				// Payees as bullets, indented
-				const payeeNames = p.payees ? Object.keys(p.payees) : [];
-				if (payeeNames.length) {
-					payeeNames.forEach((payee) => {
-						const amount = p.payees[payee];
-						const displayAmount =
-							typeof amount === "string" ? amount : `$${amount}`;
-						doc
-							.font("Helvetica")
-							.fontSize(12)
-							.text(`• ${payee}: ${displayAmount}`, {
-								indent: 16,
-							});
-					});
-				}
-
-				// Notes
-				if (p.notes) {
-					doc.moveDown(0.1);
-					doc.font("Helvetica-Oblique").fontSize(11).text(`Notes: ${p.notes}`, {
-						indent: 16,
-					});
-				}
-
-				doc.moveDown(0.4);
-			});
-		} else {
-			// No programs - still present a Programs header for consistency
-			doc.font("Helvetica-Bold").fontSize(14).text("Programs");
-			doc.moveDown(0.5);
-			doc.font("Helvetica").fontSize(12).text("No programs available.");
-		}
-
-		doc.end();
+		await streamDivisionPdfById(res, divisionRow.ID, "inline");
 	} catch (error) {
-		console.error("Error generating division PDF:", error);
+		console.error("Error generating division PDF preview:", error);
 		res.status(500).send("Failed to generate PDF");
 	}
 });
 
-// Download a PDF for a single division with attachment disposition. Call as: /download-division-pdf-file?division=Division%20Name
+/**
+ * GET: Download division PDF (attachment)
+ * Call: /download-division-pdf-file?division=Division%20Name
+ */
 app.get("/download-division-pdf-file", async (req, res) => {
 	const divisionName = req.query.division;
 	if (!divisionName)
 		return res.status(400).send("Query parameter 'division' is required");
 
 	try {
-		// Try to find the division by a tolerant match (trim + lower) to avoid issues with spacing/case
-		const [found] = await pool.query(
-			`SELECT * FROM Divisions WHERE TRIM(LOWER(division_name)) = TRIM(LOWER(?)) LIMIT 1`,
-			[divisionName]
-		);
-
-		let divisionRow = found && found.length ? found[0] : null;
-
-		// If not found, try a LIKE search as a second chance (contains)
+		const divisionRow = await findDivisionByNameTolerant(divisionName);
 		if (!divisionRow) {
-			const likePattern = `%${divisionName}%`;
-			const [likeFound] = await pool.query(
-				`SELECT * FROM Divisions WHERE division_name LIKE ? LIMIT 1`,
-				[likePattern]
-			);
-			divisionRow = likeFound && likeFound.length ? likeFound[0] : null;
-		}
-
-		// If still not found, try splitting the requested name into tokens and require all tokens be present (fuzzy match)
-		if (!divisionRow) {
-			const tokens = divisionName
-				.split(/[^A-Za-z0-9]+/)
-				.map((s) => s.trim())
-				.filter(Boolean)
-				.map((s) => s.toLowerCase());
-			if (tokens.length) {
-				const clauses = tokens
-					.map(() => "LOWER(division_name) LIKE ?")
-					.join(" AND ");
-				const params = tokens.map((t) => `%${t}%`);
-				const [multiFound] = await pool.query(
-					`SELECT * FROM Divisions WHERE ${clauses} LIMIT 1`,
-					params
-				);
-				divisionRow = multiFound && multiFound.length ? multiFound[0] : null;
-			}
-		}
-
-		if (!divisionRow) {
-			console.warn(`Division not found: '${divisionName}'`);
 			return res.status(404).send("Division not found or has no data");
 		}
-
-		// Use the division ID for subsequent queries to avoid name-matching issues
-		const divisionId = divisionRow.ID;
-
-		const [rows] = await pool.query(
-			`SELECT
-				d.division_name,
-				chair.person_name AS chair_name,
-				dean.person_name AS dean_name,
-				loc.person_name AS loc_rep,
-				pen.person_name AS pen_contact,
-				p.program_name,
-				p.has_been_paid,
-				p.report_submitted,
-				p.notes,
-				py.payee_name,
-				py.payee_amount AS amount
-			FROM Divisions d
-			LEFT JOIN Programs p ON d.ID = p.division_ID
-			LEFT JOIN Payees py ON p.ID = py.program_ID
-			LEFT JOIN Persons chair ON d.chair_ID = chair.ID
-			LEFT JOIN Persons dean ON d.dean_ID = dean.ID
-			LEFT JOIN Persons loc ON d.loc_ID = loc.ID
-			LEFT JOIN Persons pen ON d.pen_ID = pen.ID
-			WHERE d.ID = ?
-			ORDER BY p.program_name, py.payee_name`,
-			[divisionId]
-		);
-
-		// Build division object from rows (similar to /edit handler)
-		const divisionsMap = {};
-		// If there are no rows returned but we have a divisionRow, create a minimal representation
-		if (!rows || rows.length === 0) {
-			divisionsMap[divisionRow.division_name] = {
-				divisionName: divisionRow.division_name,
-				deanName: "",
-				penContact: "",
-				locRep: "",
-				chairName: "",
-				programList: [],
-			};
-		} else {
-			rows.forEach((row) => {
-				const divName = row.division_name || divisionRow.division_name;
-				if (!divisionsMap[divName]) {
-					divisionsMap[divName] = {
-						divisionName: divName,
-						deanName: row.dean_name || "",
-						penContact: row.pen_contact || "",
-						locRep: row.loc_rep || "",
-						chairName: row.chair_name || "",
-						programList: [],
-					};
-				}
-
-				if (row.program_name) {
-					let program = divisionsMap[divName].programList.find(
-						(p) => p.programName === row.program_name
-					);
-
-					if (!program) {
-						program = {
-							programName: row.program_name,
-							hasBeenPaid: Boolean(row.has_been_paid),
-							reportSubmitted: Boolean(row.report_submitted),
-							notes: row.notes || "",
-							payees: {},
-						};
-						divisionsMap[divName].programList.push(program);
-					}
-
-					if (row.payee_name) {
-						const amount =
-							row.amount === null || isNaN(parseFloat(row.amount))
-								? "To Be Determined"
-								: parseFloat(row.amount);
-						program.payees[row.payee_name] = amount;
-					}
-				}
-			});
-		}
-
-		const division = Object.values(divisionsMap)[0];
-
-		// Stream PDF using PDFKit with attachment disposition for download
-		const filename = `${division.divisionName.replace(/\s+/g, "_")}.pdf`;
-		res.setHeader("Content-Type", "application/pdf");
-		res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-
-		const doc = new PDFDocument({ margin: 50 });
-		doc.pipe(res);
-
-		// Title
-		doc.fontSize(20).font("Helvetica-Bold").text(division.divisionName);
-		doc.moveDown(0.5);
-
-		// Contacts: write each contact on its own line with a small gap to avoid overlap
-		doc.fontSize(12);
-		doc.font("Helvetica-Bold").text(`Dean: ${division.deanName || ""}`);
-		doc.moveDown(0.12);
-		doc.font("Helvetica-Bold").text(`Chair: ${division.chairName || ""}`);
-		doc.moveDown(0.12);
-		doc
-			.font("Helvetica-Bold")
-			.text(`PEN Contact: ${division.penContact || ""}`);
-		doc.moveDown(0.12);
-		doc.font("Helvetica-Bold").text(`LOC Rep: ${division.locRep || ""}`);
-		doc.moveDown(0.3);
-
-		doc.moveDown(0.5);
-
-		// Programs header
-		if (division.programList && division.programList.length) {
-			doc.font("Helvetica-Bold").fontSize(14).text("Programs");
-			doc.moveDown(0.25);
-
-			division.programList.forEach((p) => {
-				// Program name
-				doc.font("Helvetica-Bold").fontSize(13).text(p.programName);
-				doc.moveDown(0.15);
-
-				// Payees as bullets, indented
-				const payeeNames = p.payees ? Object.keys(p.payees) : [];
-				if (payeeNames.length) {
-					payeeNames.forEach((payee) => {
-						const amount = p.payees[payee];
-						const displayAmount =
-							typeof amount === "string" ? amount : `$${amount}`;
-						doc
-							.font("Helvetica")
-							.fontSize(12)
-							.text(`• ${payee}: ${displayAmount}`, {
-								indent: 16,
-							});
-					});
-				}
-
-				// Notes
-				if (p.notes) {
-					doc.moveDown(0.1);
-					doc.font("Helvetica-Oblique").fontSize(11).text(`Notes: ${p.notes}`, {
-						indent: 16,
-					});
-				}
-
-				doc.moveDown(0.4);
-			});
-		} else {
-			// No programs - still present a Programs header for consistency
-			doc.font("Helvetica-Bold").fontSize(14).text("Programs");
-			doc.moveDown(0.5);
-			doc.font("Helvetica").fontSize(12).text("No programs available.");
-		}
-
-		doc.end();
+		await streamDivisionPdfById(res, divisionRow.ID, "attachment");
 	} catch (error) {
-		console.error("Error generating division PDF:", error);
+		console.error("Error generating downloadable division PDF:", error);
 		res.status(500).send("Failed to generate PDF");
 	}
 });
 
-// POST endpoint to save division contact info and program data
+/**
+ * POST: Save division contact info and program data (non-transactional; intended for simple saves)
+ * Body shape: { divisionName, deanName, chairName, locRep, penContact, programList: [...] }
+ */
 app.post("/api/save-division", async (req, res) => {
 	const { divisionName, deanName, chairName, locRep, penContact, programList } =
 		req.body;
@@ -1024,9 +1013,8 @@ app.post("/api/save-division", async (req, res) => {
 	}
 
 	try {
-		// Find the division ID by name
 		const [divisionRows] = await pool.query(
-			`SELECT ID FROM Divisions WHERE division_name = ?`,
+			`SELECT ID FROM Divisions WHERE division_name = ? LIMIT 1`,
 			[divisionName]
 		);
 
@@ -1036,29 +1024,7 @@ app.post("/api/save-division", async (req, res) => {
 
 		const divisionId = divisionRows[0].ID;
 
-		// Helper function to get or create a person by name
-		const getOrCreatePersonId = async (personName) => {
-			if (!personName || personName.trim() === "") return null;
-			const [personRows] = await pool.query(
-				`SELECT ID FROM Persons WHERE person_name = ?`,
-				[personName]
-			);
-			if (personRows.length > 0) {
-				return personRows[0].ID;
-			}
-			// Create new person: find max ID and increment
-			const [maxIdRows] = await pool.query(
-				`SELECT MAX(ID) as maxId FROM Persons`
-			);
-			const newId = (maxIdRows[0].maxId || 0) + 1;
-			await pool.query(`INSERT INTO Persons (ID, person_name) VALUES (?, ?)`, [
-				newId,
-				personName,
-			]);
-			return newId;
-		};
-
-		// Update division contact info
+		// Create/get persons
 		const chairId = await getOrCreatePersonId(chairName);
 		const deanId = await getOrCreatePersonId(deanName);
 		const locId = await getOrCreatePersonId(locRep);
@@ -1069,17 +1035,18 @@ app.post("/api/save-division", async (req, res) => {
 			[chairId, deanId, locId, penId, divisionId]
 		);
 
-		// Update program data if provided
+		// Update programs if provided
 		if (Array.isArray(programList)) {
 			for (const program of programList) {
+				if (!program.programName) continue;
+
 				const [programRows] = await pool.query(
-					`SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ?`,
+					`SELECT ID FROM Programs WHERE program_name = ? AND division_ID = ? LIMIT 1`,
 					[program.programName, divisionId]
 				);
 
 				if (programRows.length > 0) {
 					const programId = programRows[0].ID;
-					// Update program info
 					await pool.query(
 						`UPDATE Programs SET has_been_paid = ?, report_submitted = ?, notes = ? WHERE ID = ?`,
 						[
@@ -1090,25 +1057,22 @@ app.post("/api/save-division", async (req, res) => {
 						]
 					);
 
-					// Delete old payees and insert new ones
+					// Replace payees: delete old, insert new (simple approach)
 					await pool.query(`DELETE FROM Payees WHERE program_ID = ?`, [
 						programId,
 					]);
 
-					if (program.payees && typeof program.payees === "object") {
-						for (const [payeeName, payeeAmount] of Object.entries(
-							program.payees
-						)) {
-							// Get max ID and increment for new payee
-							const [maxPayeeIdRows] = await pool.query(
-								`SELECT MAX(ID) as maxId FROM Payees`
-							);
-							const newPayeeId = (maxPayeeIdRows[0].maxId || 0) + 1;
-							await pool.query(
-								`INSERT INTO Payees (ID, payee_name, payee_amount, program_ID) VALUES (?, ?, ?, ?)`,
-								[newPayeeId, payeeName, payeeAmount, programId]
-							);
-						}
+					for (const [payeeName, payeeAmount] of Object.entries(
+						program.payees || {}
+					)) {
+						await pool.query(
+							`INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)`,
+							[
+								payeeName,
+								payeeAmount === "" ? null : Number(payeeAmount),
+								programId,
+							]
+						);
 					}
 				}
 			}
@@ -1121,6 +1085,9 @@ app.post("/api/save-division", async (req, res) => {
 	}
 });
 
+/**
+ * Start server
+ */
 app.listen(PORT, () => {
 	console.log(`Server is running at http://localhost:${PORT}`);
 });
