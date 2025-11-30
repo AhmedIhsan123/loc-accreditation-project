@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Login - Green River College</title>
+		<link rel="stylesheet" href="styles/styles.css" />
+		<link rel="stylesheet" href="styles/login.css" />
+	</head>
+	<body>
+		<div class="login-container">
+			<div class="logo-container">
+				<img
+					src="/images/GreenRiverCollege_Logo.png"
+					alt="Green River College Logo"
+				/>
+			</div>
+
+			<h1>Green River College</h1>
+			<p class="subtitle">LOC Accreditation Portal</p>
+
+			<% if (typeof error !== 'undefined' && error) { %>
+			<div class="error-message"><%= error %></div>
+			<% } %> <% const registered = typeof query !== 'undefined' &&
+			query.registered === 'true'; %> <% if (registered) { %>
+			<div class="success-message">Registration successful! Please log in.</div>
+			<% } %>
+
+			<form action="/login" method="POST">
+				<div class="form-group">
+					<label for="username">Username</label>
+					<input
+						type="text"
+						id="username"
+						name="username"
+						required
+						autocomplete="username"
+					/>
+				</div>
+
+				<div class="form-group">
+					<label for="password">Password</label>
+					<input
+						type="password"
+						id="password"
+						name="password"
+						required
+						autocomplete="current-password"
+					/>
+				</div>
+
+				<button type="submit" class="btn-login">Sign In</button>
+			</form>
+
+			<div class="register-link">
+				Don't have an account? <a href="/register">Register here</a>
+			</div>
+		</div>
+	</body>
+</html>

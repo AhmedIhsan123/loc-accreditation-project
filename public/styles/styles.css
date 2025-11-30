@@ -60,7 +60,7 @@
 	text-decoration: none;
 }
 
-#sign-in-button {
+.logout-button {
 	font-size: var(--font-size-base);
 	border: 0;
 	border-radius: var(--border-radius);

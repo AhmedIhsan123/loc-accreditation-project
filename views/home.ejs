@@ -9,11 +9,14 @@
 		<script src="//cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 		<%
 			const _serverDepartments = typeof departments !== 'undefined' ? departments : [];
+			const _changelog = typeof changelog !== 'undefined' ? changelog : [];
 		%>
 		<script>
 			// Inject server departments (if provided) so client uses DB data instead of sample data
 			window.serverDepartments = <%- JSON.stringify(_serverDepartments) %>;
+			window.changelog = <%- JSON.stringify(_changelog) %>;
 		</script>
+		<script type="module" src="js/timeAgo.js"></script>
 		<script type="module" src="js/home.js"></script>
 
 		<link rel="stylesheet" href="styles/styles.css" />
@@ -25,7 +28,11 @@
 				<a href="/">
 					<h1>Green River College</h1>
 				</a>
-				<button id="sign-in-button">Sign in</button>
+				<% if (user) { %>
+				<form action="/logout" method="POST" style="display: inline;">
+    			<button type="submit" class="logout-button">Logout</button>
+				</form>
+				<% } %>
 			</nav>
 		</header>
 
@@ -60,26 +67,21 @@
 				<section id="changelog-section" class="section">
 					<h2 class="section-title">Recent Changes</h2>
 					<ul id="history-list">
-						<li class="history-item">
-							<span class="field-name">Chair:</span>
-							<span class="field-value">Dr. Sarah Mitchell</span>
-							<span class="timestamp">2 hours ago by Joel</span>
-						</li>
-						<li class="history-item">
-							<span class="field-name">PEN Contact:</span>
-							<span class="field-value">Jennifer Rodriguez</span>
-							<span class="timestamp">Yesterday by Vincent</span>
-						</li>
-						<li class="history-item">
-							<span class="field-name">Dean:</span>
-							<span class="field-value">Dr. Robert Chen</span>
-							<span class="timestamp">3 days ago by Arthur</span>
-						</li>
-						<li class="history-item">
-							<span class="field-name">LOC Representative:</span>
-							<span class="field-value">Michael Thompson</span>
-							<span class="timestamp">1 week ago by Rachel</span>
-						</li>
+						<% if (_changelog && _changelog.length > 0) { %>
+							<% _changelog.forEach(entry => { %>
+								<li class="history-item" data-timestamp="<%= entry.changed_at %>">
+									<span class="field-name"><%= entry.field_name %>:</span>
+									<span class="field-value"><%= entry.new_value %></span>
+									<span class="timestamp" data-time="<%= entry.changed_at %>">
+										<%= entry.changed_by ? 'by ' + entry.changed_by : '' %>
+									</span>
+								</li>
+							<% }); %>
+						<% } else { %>
+							<li class="history-item">
+								<span class="field-value">No recent changes</span>
+							</li>
+						<% } %>
 					</ul>
 				</section>
 			</div>
