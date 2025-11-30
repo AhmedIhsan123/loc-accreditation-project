@@ -412,13 +412,13 @@ app.get("/", async (req, res) => {
 			}
 		});
 
-		const [changelogRows] = await pool.query(
+		const [changelog] = await pool.query(
 			`SELECT * FROM Changelog ORDER BY ID DESC`
 		);
 
 		res.render("home", {
 			departments: Object.values(divisionsMap),
-			changelogs: changelogRows,
+			changelogs: changelog,
 		});
 	} catch (err) {
 		console.error("Error fetching divisions for home:", err);
@@ -528,9 +528,9 @@ app.patch("/api/division/full-update", async (req, res) => {
 			programs = [],
 			deletedPrograms = [],
 			movedPrograms = [],
-			renamedPrograms = []
+			renamedPrograms = [],
 		} = req.body;
-		
+
 		console.log("Received update request for division:", divisionName);
 		console.log("Division-level data:", { dean, pen, loc, chair });
 		console.log("Programs received:", programs);
@@ -562,9 +562,18 @@ app.patch("/api/division/full-update", async (req, res) => {
 		// --- Handle renamed programs FIRST ---
 		if (renamedPrograms && renamedPrograms.length > 0) {
 			for (const renamedProgram of renamedPrograms) {
-				const { oldProgramName, programName, payees, hasBeenPaid, reportSubmitted, notes } = renamedProgram;
+				const {
+					oldProgramName,
+					programName,
+					payees,
+					hasBeenPaid,
+					reportSubmitted,
+					notes,
+				} = renamedProgram;
 
-				console.log(`Renaming program from "${oldProgramName}" to "${programName}"`);
+				console.log(
+					`Renaming program from "${oldProgramName}" to "${programName}"`
+				);
 
 				// Find the program by old name
 				const [programRows] = await connection.query(
@@ -583,13 +592,14 @@ app.patch("/api/division/full-update", async (req, res) => {
 						[programName, hasBeenPaid, reportSubmitted, notes, programID]
 					);
 
-					console.log(`Renamed program ID ${programID} from "${oldProgramName}" to "${programName}"`);
+					console.log(
+						`Renamed program ID ${programID} from "${oldProgramName}" to "${programName}"`
+					);
 
 					// Update payees
-					await connection.query(
-						"DELETE FROM Payees WHERE program_ID = ?",
-						[programID]
-					);
+					await connection.query("DELETE FROM Payees WHERE program_ID = ?", [
+						programID,
+					]);
 
 					for (const [name, amount] of Object.entries(payees || {})) {
 						if (!name || name.trim() === "") continue;
@@ -600,7 +610,9 @@ app.patch("/api/division/full-update", async (req, res) => {
 						);
 					}
 				} else {
-					console.warn(`Program "${oldProgramName}" not found in division "${divisionName}"`);
+					console.warn(
+						`Program "${oldProgramName}" not found in division "${divisionName}"`
+					);
 				}
 			}
 		}
@@ -608,13 +620,13 @@ app.patch("/api/division/full-update", async (req, res) => {
 		// --- Handle moved programs FIRST (before deletions) ---
 		if (movedPrograms && movedPrograms.length > 0) {
 			for (const movedProgram of movedPrograms) {
-				const { 
-					targetDivision, 
-					programName, 
-					payees, 
-					hasBeenPaid, 
-					reportSubmitted, 
-					notes 
+				const {
+					targetDivision,
+					programName,
+					payees,
+					hasBeenPaid,
+					reportSubmitted,
+					notes,
 				} = movedProgram;
 
 				console.log(`Moving program "${programName}" to "${targetDivision}"`);
@@ -626,7 +638,9 @@ app.patch("/api/division/full-update", async (req, res) => {
 				);
 
 				if (!targetDivRows.length) {
-					console.warn(`Target division "${targetDivision}" not found for program "${programName}"`);
+					console.warn(
+						`Target division "${targetDivision}" not found for program "${programName}"`
+					);
 					continue; // Skip this move
 				}
 
@@ -649,14 +663,15 @@ app.patch("/api/division/full-update", async (req, res) => {
 						[targetDivisionID, hasBeenPaid, reportSubmitted, notes, programID]
 					);
 
-					console.log(`Updated program ${programName} (ID: ${programID}) to division ${targetDivision}`);
+					console.log(
+						`Updated program ${programName} (ID: ${programID}) to division ${targetDivision}`
+					);
 
 					// Update payees for the moved program
 					// First, delete existing payees
-					await connection.query(
-						"DELETE FROM Payees WHERE program_ID = ?",
-						[programID]
-					);
+					await connection.query("DELETE FROM Payees WHERE program_ID = ?", [
+						programID,
+					]);
 
 					// Insert updated payees
 					for (const [name, amount] of Object.entries(payees || {})) {
@@ -666,12 +681,18 @@ app.patch("/api/division/full-update", async (req, res) => {
 							"INSERT INTO Payees (payee_name, payee_amount, program_ID) VALUES (?, ?, ?)",
 							[name, amount, programID]
 						);
-						console.log(`Inserted payee ${name} with amount ${amount} for moved program`);
+						console.log(
+							`Inserted payee ${name} with amount ${amount} for moved program`
+						);
 					}
 
-					console.log(`Successfully moved program "${programName}" from "${divisionName}" to "${targetDivision}"`);
+					console.log(
+						`Successfully moved program "${programName}" from "${divisionName}" to "${targetDivision}"`
+					);
 				} else {
-					console.warn(`Program "${programName}" not found in source division "${divisionName}"`);
+					console.warn(
+						`Program "${programName}" not found in source division "${divisionName}"`
+					);
 				}
 			}
 		}

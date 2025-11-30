@@ -14,7 +14,7 @@
 		<script>
 			// Inject server departments (if provided) so client uses DB data instead of sample data
 			window.serverDepartments = <%- JSON.stringify(_serverDepartments) %>;
-			window.changelogs = <%- JSON.stringify(_changelogs) %>;
+			window.changelogs = <%- JSON.stringify(changelogs) %>;
 		</script>
 		<script type="module" src="js/timeAgo.js"></script>
 		<script type="module" src="js/home.js"></script>
@@ -66,23 +66,7 @@
 
 				<section id="changelog-section" class="section">
 					<h2 class="section-title">Recent Changes</h2>
-					<ul id="history-list">
-						<% if (_changelog && _changelog.length > 0) { %>
-							<% _changelog.forEach(entry => { %>
-								<li class="history-item" data-timestamp="<%= entry.changed_at %>">
-									<span class="field-name"><%= entry.field_name %>:</span>
-									<span class="field-value"><%= entry.new_value %></span>
-									<span class="timestamp" data-time="<%= entry.changed_at %>">
-										<%= entry.changed_by ? 'by ' + entry.changed_by : '' %>
-									</span>
-								</li>
-							<% }); %>
-						<% } else { %>
-							<li class="history-item">
-								<span class="field-value">No recent changes</span>
-							</li>
-						<% } %>
-					</ul>
+					<ul id="history-list"></ul>
 				</section>
 			</div>
 		</main>

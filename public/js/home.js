@@ -1,5 +1,4 @@
 // Import timeAgo function
-import { timeAgo } from "./timeAgo.js";
 
 // Initialize after DOM ready to avoid running before elements exist
 window.addEventListener("DOMContentLoaded", () => {
