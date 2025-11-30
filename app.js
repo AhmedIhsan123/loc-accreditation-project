@@ -3,11 +3,28 @@ import express from "express";
 import mysql2 from "mysql2";
 import PDFDocument from "pdfkit";
 import dotenv from "dotenv";
+import bcrypt from "bcrypt";
+import session from "express-session";
+import MySQLStoreConstructor from "express-mysql-session";
+import { authenticateUser, redirectIfAuthenticated } from "./middlewares.js";
 
 dotenv.config();
 
 const app = express();
 
+// initialize session store
+app.use(
+	session({
+		secret: process.env.SESSION_SECRET,
+		resave: false,
+		saveUninitialized: false,
+		cookie: {
+			maxAge: 1000 * 60 * 60 * 12, // 12 hours
+		},
+	})
+);
+
+// Create mySQL connection pool
 const pool = mysql2
 	.createPool({
 		host: process.env.DB_HOST,
@@ -21,18 +38,161 @@ const pool = mysql2
 	})
 	.promise();
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3200;
+const MySQLStore = MySQLStoreConstructor(session);
+const sessionStore = new MySQLStore({}, pool);
+
+const PORT = 3200;
 
 app.set("view engine", "ejs");
+
 app.use(express.static("public"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Make user data available across all ejs templates
+app.use((req, res, next) => {
+	res.locals.user = req.session.user;
+	next();
+});
+
 /**
  * ------------------------------
- * Helper utilities
+ * GET: Login Page
  * ------------------------------
  */
+app.get("/login", redirectIfAuthenticated, (req, res) => {
+	res.render("login", { error: null, query: req.query });
+});
+
+/**
+ * ------------------------------
+ * POST: Login Submission
+ * ------------------------------
+ */
+app.post("/login", async (req, res) => {
+	const { username, password } = req.body;
+
+	try {
+		const [users] = await pool.query(
+			"SELECT * FROM users WHERE username = ? AND is_active = 1",
+			[username]
+		);
+
+		if (users.length === 0) {
+			return res.status(401).render("login", { error: "Invalid credentials" });
+		}
+
+		const user = users[0];
+		const isValid = await bcrypt.compare(password, user.password_hash);
+
+		if (!isValid) {
+			return res.status(401).render("login", { error: "Invalid credentials" });
+		}
+
+		// Set session
+		req.session.user = {
+			id: user.id,
+			username: user.username,
+			email: user.email,
+			first_name: user.first_name,
+		};
+
+		// Update last login timestamp
+		await pool.query("UPDATE users SET last_login = NOW() WHERE id = ?", [
+			user.id,
+		]);
+
+		res.redirect("/");
+	} catch (error) {
+		console.error("Login error:", error);
+		res.status(500).render("login", { error: "An error occurred" });
+	}
+});
+
+/**
+ * ------------------------------
+ * GET: Registration Page
+ * ------------------------------
+ */
+app.get("/register", redirectIfAuthenticated, (req, res) => {
+	res.render("register", { error: null, success: null });
+});
+
+/**
+ * ------------------------------
+ * POST: Registration Submission
+ * ------------------------------
+ */
+app.post("/register", async (req, res) => {
+	const { username, email, password, first_name } = req.body;
+
+	try {
+		// Validate required fields
+		if (!username || !email || !password || !first_name) {
+			return res.status(400).render("register", {
+				error: "All fields are required",
+				success: null,
+			});
+		}
+
+		// Check if username or email already exists
+		const [rows] = await pool.query(
+			"SELECT username, email FROM users WHERE username = ? OR email = ?",
+			[username, email]
+		);
+
+		if (rows.length > 0) {
+			const user = rows[0];
+
+			if (user.username === username) {
+				return res.status(409).render("register", {
+					error: "Username already taken",
+					success: null,
+				});
+			}
+
+			if (user.email === email) {
+				return res.status(409).render("register", {
+					error: "Email already registered",
+					success: null,
+				});
+			}
+		}
+
+		// Hash password
+		const saltRounds = 10;
+		const password_hash = await bcrypt.hash(password, saltRounds);
+
+		// Insert new user
+		await pool.query(
+			"INSERT INTO users (username, email, password_hash, first_name, created_at, is_active) VALUES (?, ?, ?, ?, NOW(), 1)",
+			[username, email, password_hash, first_name]
+		);
+
+		// Redirect to login with success message
+		return res.redirect("/login?registered=true");
+	} catch (error) {
+		console.error("Registration error:", error);
+		return res.status(500).render("register", {
+			error: "An error occurred during registration",
+			success: null,
+		});
+	}
+});
+
+/**
+ * ------------------------------
+ * POST: Logout
+ * ------------------------------
+ */
+app.post("/logout", authenticateUser, (req, res) => {
+	req.session.destroy((error) => {
+		if (error) {
+			console.error("Logout error:", error);
+		}
+		res.redirect("/login");
+	});
+});
 
 /**
  * Safely produce "?, ?, ?" placeholders for an array and return combined params.

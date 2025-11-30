@@ -1,0 +1,141 @@
+body {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	background: #f5f5f5;
+	margin: 0;
+	font-family: Arial, sans-serif;
+}
+
+.register-container {
+	background: white;
+	padding: 2.5rem;
+	border-radius: 12px;
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 450px;
+}
+
+.logo-container {
+	text-align: center;
+	margin-bottom: 1.5rem;
+}
+
+.logo-container img {
+	max-width: 200px;
+	height: auto;
+}
+
+h1 {
+	text-align: center;
+	color: #2c882b;
+	margin-bottom: 0.5rem;
+	font-size: 1.8rem;
+}
+
+.subtitle {
+	text-align: center;
+	color: #5b5a5a;
+	margin-bottom: 2rem;
+	font-size: 0.9rem;
+}
+
+.form-group {
+	margin-bottom: 1.5rem;
+}
+
+label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: #555;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+	width: 100%;
+	padding: 0.75rem;
+	border: 2px solid #ddd;
+	border-radius: 6px;
+	font-size: 1rem;
+	transition: border-color 0.3s;
+	box-sizing: border-box;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+	outline: none;
+	border-color: #2c882b;
+}
+
+.validation-error {
+	color: #c33;
+	font-size: 0.85rem;
+	margin-top: 0.25rem;
+	font-weight: 500;
+}
+
+.error-message {
+	background: #fee;
+	color: #c33;
+	padding: 0.75rem;
+	border-radius: 6px;
+	margin-bottom: 1rem;
+	border-left: 4px solid #c33;
+	font-size: 0.9rem;
+}
+
+/* Invalid input styling */
+.form-group input.invalid {
+	border-color: #c33 !important;
+	background-color: #fff5f5;
+}
+
+/* Valid input styling */
+.form-group input.valid {
+	border-color: #2c882b !important;
+	background-color: #f0f9f0;
+}
+
+.btn-register {
+	width: 100%;
+	padding: 0.875rem;
+	background: linear-gradient(135deg, #2c882b 0%, #1a5c19 100%);
+	color: white;
+	border: none;
+	border-radius: 6px;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-register:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 5px 15px rgba(44, 136, 43, 0.4);
+}
+
+.btn-register:active {
+	transform: translateY(0);
+}
+
+.login-link {
+	text-align: center;
+	margin-top: 1.5rem;
+	color: #5b5a5a;
+	font-size: 0.9rem;
+}
+
+.login-link a {
+	color: #2c882b;
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.login-link a:hover {
+	text-decoration: underline;
+}

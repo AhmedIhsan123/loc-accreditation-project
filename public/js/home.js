@@ -1,3 +1,6 @@
+// Import timeAgo function
+import { timeAgo } from "./timeAgo.js";
+
 // Initialize after DOM ready to avoid running before elements exist
 window.addEventListener("DOMContentLoaded", () => {
 	// Global variables
@@ -276,3 +279,38 @@ const editFormSection = document.getElementById("edit-form-section");
 editFormSection.addEventListener("click", () => {
 	window.location.href = "/edit";
 });
+
+/**
+ * Update all changelog timestamps to show "time ago" format
+ */
+function updateChangelogTimestamps() {
+	const timestampElements = document.querySelectorAll(".timestamp[data-time]");
+
+	timestampElements.forEach((element) => {
+		const timestamp = element.getAttribute("data-time");
+		const changedBy = element.textContent.trim();
+
+		if (timestamp) {
+			const timeAgoText = timeAgo(timestamp);
+			// Preserve the "by [username]" part if it exists
+			element.textContent = changedBy
+				? `${timeAgoText} ${changedBy}`
+				: timeAgoText;
+		}
+	});
+
+	// Update timestamps every minute to keep them fresh
+	setInterval(() => {
+		timestampElements.forEach((element) => {
+			const timestamp = element.getAttribute("data-time");
+			const changedBy = element.textContent.split(" by ")[1];
+
+			if (timestamp) {
+				const timeAgoText = timeAgo(timestamp);
+				element.textContent = changedBy
+					? `${timeAgoText} by ${changedBy}`
+					: timeAgoText;
+			}
+		});
+	}, 240000); // Update every 4 minutes
+}
