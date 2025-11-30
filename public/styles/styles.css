@@ -55,6 +55,11 @@
 	background-color: var(--primary-color);
 }
 
+.navigation-bar a {
+	color: var(--text-color);
+	text-decoration: none;
+}
+
 #sign-in-button {
 	font-size: var(--font-size-base);
 	border: 0;

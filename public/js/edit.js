@@ -1,6 +1,6 @@
 /* ==============================
-   FORM DATA
-   ============================== */
+	FORM DATA
+	============================== */
 /**
  * Holds server-provided departments array.
  * This mirrors the backend payload exactly.
@@ -14,24 +14,114 @@ const data = { departments: window.serverDepartments || [] };
 let originalState = null;
 
 /* ==============================
-   DOM REFERENCES
-   ============================== */
-const divSelector = document.getElementById("division-select");
-const programsArray = document.querySelectorAll(".program");
+	DOM HELPERS
+	============================== */
+function safeGetByIdOrName(id, name) {
+	// Try by id first, then by name attribute, then data-field.
+	let el = document.getElementById(id);
+	if (el) return el;
+	if (name) {
+		el = document.querySelector(`[name="${name}"]`);
+		if (el) {
+			el.id = id; // set ID so later code can rely on it
+			return el;
+		}
+	}
+	el = document.querySelector(`[data-field="${name || id}"]`);
+	if (el) {
+		if (!el.id) el.id = id;
+		return el;
+	}
+	return null;
+}
 
-// Division-level input fields
-const deanInput = document.getElementById("dean-input");
-const penInput = document.getElementById("pen-input");
-const locInput = document.getElementById("loc-input");
-const chairInput = document.getElementById("chair-input");
+function ensureProgramHasId(program) {
+	if (!program.id || program.id.trim() === "") {
+		const titleEl = program.querySelector(".p-title");
+		const name =
+			(titleEl && titleEl.textContent && titleEl.textContent.trim()) ||
+			"program";
+		const safeId = `${name.replace(/\s+/g, "-").toLowerCase()}-program`;
+		program.id = safeId;
+	}
+	return program.id;
+}
 
-// Master form buttons
-const editFormBtn = document.getElementById("edit-form-btn");
-const saveFormBtn = document.getElementById("save-form-btn");
-const cancelFormBtn = document.getElementById("cancel-form-btn");
-const showMoreBtn = document.getElementById("show-more-btn");
-const addProgramBtn = document.getElementById("add-program-btn");
-const returnBtn = document.getElementById("return-btn");
+function ensurePayeeFieldNames(program) {
+	const programId = ensureProgramHasId(program);
+	const payeeContainer = program.querySelector(".payee-container");
+	if (!payeeContainer) return;
+	const payeeItems = payeeContainer.querySelectorAll(".payee-item");
+	Array.from(payeeItems).forEach((item, idx) => {
+		const nameInput = item.querySelector("input[type='text']");
+		const amountInput = item.querySelector("input[type='number']");
+		if (nameInput) {
+			if (!nameInput.name)
+				nameInput.name = `${programId}-payee-name-${idx + 1}`;
+			if (!nameInput.id) nameInput.id = `${programId}-payee-name-${idx + 1}`;
+		}
+		if (amountInput) {
+			if (!amountInput.name)
+				amountInput.name = `${programId}-payee-amount-${idx + 1}`;
+			if (!amountInput.id)
+				amountInput.id = `${programId}-payee-amount-${idx + 1}`;
+		}
+	});
+}
+
+/* ==============================
+	DOM REFERENCES
+	============================== */
+// Division selection (try both ID and name)
+const divSelector = safeGetByIdOrName("division-select", "division");
+
+// All program nodes
+let programsArray = document.querySelectorAll(".program");
+
+// Division-level input fields: try ID then name then data-field, and ensure they have IDs
+const deanInput = safeGetByIdOrName("dean-input", "dean");
+const penInput = safeGetByIdOrName("pen-input", "pen");
+const locInput = safeGetByIdOrName("loc-input", "loc");
+const chairInput = safeGetByIdOrName("chair-input", "chair");
+
+// Master form buttons (try ID then name)
+const editFormBtn = safeGetByIdOrName("edit-form-btn", "edit");
+const saveFormBtn = safeGetByIdOrName("save-form-btn", "save");
+const cancelFormBtn = safeGetByIdOrName("cancel-form-btn", "cancel");
+const showMoreBtn = safeGetByIdOrName("show-more-btn", "show-more");
+const addProgramBtn = safeGetByIdOrName("add-program-btn", "add-program");
+const returnBtn = safeGetByIdOrName("return-btn", "return");
+
+// Ensure essential DOM elements exist; fail early with console warnings
+if (!divSelector)
+	console.warn(
+		"Division selector not found (expected #division-select or [name=division])."
+	);
+if (!deanInput)
+	console.warn("Dean input not found (expected #dean-input or [name=dean]).");
+if (!penInput)
+	console.warn("PEN input not found (expected #pen-input or [name=pen]).");
+if (!locInput)
+	console.warn("LOC input not found (expected #loc-input or [name=loc]).");
+if (!chairInput)
+	console.warn(
+		"Chair input not found (expected #chair-input or [name=chair])."
+	);
+if (!editFormBtn)
+	console.warn("Edit button not found (expected #edit-form-btn).");
+if (!saveFormBtn)
+	console.warn("Save button not found (expected #save-form-btn).");
+if (!cancelFormBtn)
+	console.warn("Cancel button not found (expected #cancel-form-btn).");
+if (!showMoreBtn)
+	console.warn("Show more button not found (expected #show-more-btn).");
+if (!addProgramBtn)
+	console.warn("Add program button not found (expected #add-program-btn).");
+if (!returnBtn) console.warn("Return button not found (expected #return-btn).");
+
+// If showMoreBtn exists but has no value set, default it to "false"
+if (showMoreBtn && typeof showMoreBtn.value === "undefined")
+	showMoreBtn.value = "false";
 
 // Modal references
 const moveProgramModal = document.getElementById("move-program-modal");
@@ -45,12 +135,40 @@ const moveModalConfirm = document.getElementById("move-modal-confirm");
 let currentProgramToMove = null; // Track which program is being moved
 
 /* ==============================
-   DIVISION SELECTION HANDLER
-   ============================== */
-/**
- * Handles selecting a division from the dropdown.
- * Loads its data and reveals the correct program cards.
- */
+	SYNCHRONIZE EXISTING PROGRAM/INPUT ATTRIBUTES
+	============================== */
+// Ensure every program has a valid ID and ensure payee inputs within have name/id attributes
+Array.from(document.querySelectorAll(".program")).forEach((program) => {
+	// Ensure program has an ID matching the title
+	ensureProgramHasId(program);
+
+	// If the program title doesn't exist, try to set consistent title based on the id
+	let titleEl = program.querySelector(".p-title");
+	if (!titleEl) {
+		titleEl = document.createElement("p");
+		titleEl.className = "p-title";
+		titleEl.textContent = program.id
+			.replace(/-program$/, "")
+			.replace(/-/g, " ");
+		program.insertBefore(titleEl, program.firstChild);
+	}
+
+	// Ensure payee inputs have names and IDs
+	ensurePayeeFieldNames(program);
+
+	// Ensure add-payee button has a name attribute for form.submit clarity
+	const addBtn = program.querySelector(".add-payee-btn");
+	if (addBtn && !addBtn.name) addBtn.name = `${program.id}-add-payee-btn`;
+
+	// Ensure remove buttons have data attributes referencing their program
+	const removeProgramBtns = program.querySelectorAll(".remove-program-btn");
+	removeProgramBtns.forEach((b) => {
+		if (!b.dataset.programId) b.dataset.programId = program.id;
+	});
+});
+
+// Refresh programsArray in case IDs/nodes updated
+programsArray = document.querySelectorAll(".program");
 divSelector.addEventListener("change", () => {
 	const selectedDivision = divSelector.value;
 
@@ -551,6 +669,9 @@ function setFormEditable(editable) {
 	locInput.disabled = !editable;
 	chairInput.disabled = !editable;
 
+	// Disable the div selector
+	divSelector.disabled = editable;
+
 	// Program-level controls (only for visible program cards)
 	// Query current DOM to get all programs including any rebuilt ones
 	const currentPrograms = document.querySelectorAll(".program");
@@ -605,7 +726,7 @@ editFormBtn.addEventListener("click", () => {
 	saveFormBtn.style.display = "inline-block";
 	cancelFormBtn.style.display = "inline-block";
 	addProgramBtn.style.display = "inline-block";
-	returnBtn.style.display = "inline-block";
+	returnBtn.style.display = "none";
 });
 
 /**
@@ -620,26 +741,33 @@ cancelFormBtn.addEventListener("click", () => {
 	saveFormBtn.style.display = "none";
 	cancelFormBtn.style.display = "none";
 	addProgramBtn.style.display = "none";
-	returnBtn.style.display = "none";
+	returnBtn.style.display = "inline-block";
 });
 
 /**
  * Click handler for the "Show More" button.
  * - Displays all programs; turns into "Show Less" button that hides all programs that are not under review
+ * - If in edit mode, ensures newly visible cards are editable
  */
 showMoreBtn.addEventListener("click", () => {
 	const selectedDivision = divSelector.value;
+	const isCurrentlyEditing = editFormBtn.style.display === "none"; // If edit btn is hidden, we're in edit mode
 
 	if (showMoreBtn.value == "false") {
 		showProgramCards(selectedDivision, true);
 		showMoreBtn.textContent = "Show Less";
 		showMoreBtn.value = "true";
-		console.log("Switched to Show Less")
+		console.log("Switched to Show Less");
 	} else {
 		showProgramCards(selectedDivision, false);
 		showMoreBtn.textContent = "Show More";
 		showMoreBtn.value = "false";
-		console.log("Switched to Show More")
+		console.log("Switched to Show More");
+	}
+
+	// If we're currently in edit mode, apply edit state to the newly revealed cards
+	if (isCurrentlyEditing) {
+		setFormEditable(true);
 	}
 });
 
@@ -905,8 +1033,6 @@ saveFormBtn.addEventListener("click", async () => {
 		});
 		if (!res.ok) throw new Error("Failed to save");
 
-		alert("Changes saved successfully!");
-
 		// Reset UI
 		setFormEditable(false);
 		editFormBtn.style.display = "inline-block";
@@ -918,10 +1044,7 @@ saveFormBtn.addEventListener("click", async () => {
 		window.location.reload();
 	} catch (err) {
 		console.error(err);
-		alert("Error saving changes.");
 	}
-
-	window.location.href = "/";
 });
 
 /* ==============================
