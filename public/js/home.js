@@ -1,3 +1,5 @@
+// Import timeAgo function
+
 // Initialize after DOM ready to avoid running before elements exist
 window.addEventListener("DOMContentLoaded", () => {
 	// Global variables
@@ -24,8 +26,10 @@ function buildChangelogList(changelogs) {
 	const list = document.getElementById("history-list");
 	if (!list) return;
 
+	// Clear existing static HTML
 	list.innerHTML = "";
 
+	// Sort newest first
 	const sorted = [...changelogs].sort(
 		(a, b) => new Date(b.save_time) - new Date(a.save_time)
 	);
@@ -36,84 +40,19 @@ function buildChangelogList(changelogs) {
 
 		const fieldName = document.createElement("span");
 		fieldName.classList.add("field-name");
-		fieldName.textContent = entry.username || "Anonymous User";
+		fieldName.textContent = `Anonymous User`;
 
-		const fieldValue = document.createElement("div");
+		const fieldValue = document.createElement("span");
 		fieldValue.classList.add("field-value");
+		fieldValue.innerHTML = entry.changes.replace(/\n/g, "<br>"); // summary
 
-		const lines = entry.changes
-			.split("\n")
-			.map((l) => l.trim())
-			.filter((l) => l.length > 0);
-
-		let groups = [];
-		let current = [];
-
-		for (const line of lines) {
-			if (isHeader(line)) {
-				if (current.length > 0) groups.push(current);
-				current = [line];
-			} else {
-				current.push(line);
-			}
-		}
-		if (current.length > 0) groups.push(current);
-
-		// Build structured groups
-		groups.forEach((group) => {
-			const headerText = group[0];
-			const bodyLines = group.slice(1);
-
-			const groupDiv = document.createElement("div");
-			groupDiv.classList.add("changelog-group");
-
-			const header = document.createElement("div");
-			header.classList.add("changelog-header");
-			header.textContent = headerText;
-			header.addEventListener("click", () => {
-				body.classList.toggle("collapsed");
-			});
-
-			const body = document.createElement("div");
-			body.classList.add("changelog-body");
-			body.innerHTML = bodyLines.map(escapeHtml).join("<br>");
-			body.classList.add("collapsed"); // initially collapsed
-
-			groupDiv.append(header, body);
-			fieldValue.appendChild(groupDiv);
-		});
-
-		// Add timestamp
 		const timestamp = document.createElement("span");
 		timestamp.classList.add("timestamp");
-		timestamp.setAttribute("data-time", entry.save_time);
-		timestamp.textContent = ""; // will be updated by timeAgo
+		timestamp.textContent = timeAgo(entry.save_time);
 
 		li.append(fieldName, fieldValue, timestamp);
 		list.appendChild(li);
 	});
-}
-
-function isHeader(line) {
-	return (
-		line.endsWith(":") ||
-		line.startsWith("[") ||
-		line.startsWith("Division Person") ||
-		line.startsWith("Created Program") ||
-		line.startsWith("Program Deleted") ||
-		line.startsWith("Program Moved") ||
-		line.startsWith("Program Renamed") ||
-		line.startsWith("Program Updated")
-	);
-}
-
-function escapeHtml(str) {
-	return str
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
 }
 
 /* ----------------------------
