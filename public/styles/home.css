@@ -15,7 +15,8 @@ main {
 
 #page-container {
 	display: grid;
-	grid-template-areas: "edit-form edit-form changelog";
+	grid-template-areas: "edit-form changelog";
+	grid-template-columns: 3fr 1fr;
 	gap: var(--gap-large);
 	height: 100%;
 }
@@ -342,9 +343,8 @@ main {
 	}
 
 	#page-container {
-		grid-template-areas:
-			"edit-form"
-			"changelog";
+		display: flex;
+		flex-direction: column;
 	}
 
 	#division-cards-section {
