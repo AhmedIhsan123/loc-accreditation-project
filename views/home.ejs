@@ -7,15 +7,22 @@
 
 		<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
 		<script src="//cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
-		<%
-			const _serverDepartments = typeof departments !== 'undefined' ? departments : [];
-			const _changelogs = typeof changelogs !== 'undefined' ? changelogs : [];
-		%>
-		<script>
-			// Inject server departments (if provided) so client uses DB data instead of sample data
-			window.serverDepartments = <%- JSON.stringify(_serverDepartments) %>;
-			window.changelogs = <%- JSON.stringify(changelogs) %>;
+		<% const _serverDepartments = typeof departments !== 'undefined' ?
+		departments : []; %> <% const _changelogs = typeof changelogs !==
+		'undefined' ? changelogs : []; %>
+
+		<script type="application/json" id="server-data">
+			<%- JSON.stringify({departments: _serverDepartments, changelogs: _changelogs}) %>
 		</script>
+
+		<script>
+			const data = JSON.parse(
+				document.getElementById("server-data").textContent
+			);
+			window.serverDepartments = data.departments;
+			window.changelogs = data.changelogs;
+		</script>
+
 		<script type="module" src="js/timeAgo.js"></script>
 		<script type="module" src="js/home.js"></script>
 
@@ -29,8 +36,8 @@
 					<h1>Green River College</h1>
 				</a>
 				<% if (user) { %>
-				<form action="/logout" method="POST" style="display: inline;">
-    			<button type="submit" class="logout-button">Logout</button>
+				<form action="/logout" method="POST" style="display: inline">
+					<button type="submit" class="logout-button">Logout</button>
 				</form>
 				<% } %>
 			</nav>
@@ -44,22 +51,70 @@
 					<div id="division-cards-section"></div>
 
 					<div id="click-form-msg">
-						<a href="/edit" style="text-decoration: none; color: inherit; display: block;">
+						<a
+							href="/edit"
+							style="text-decoration: none; color: inherit; display: block"
+						>
 							<p>Click to edit form</p>
 						</a>
+					</div>
 				</section>
 
 				<!-- Modal for viewing a division form -->
-				<div id="form-modal" class="modal" style="display:none;">
-					<div class="modal-backdrop" id="modal-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);"></div>
-					<div class="modal-content" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:0;max-width:900px;width:95%;max-height:85vh;overflow:visible;border-radius:6px;display:flex;flex-direction:column;">
-						<header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:16px 20px;">
+				<div id="form-modal" class="modal" style="display: none">
+					<div
+						class="modal-backdrop"
+						id="modal-backdrop"
+						style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5)"
+					></div>
+					<div
+						class="modal-content"
+						style="
+							position: fixed;
+							left: 50%;
+							top: 50%;
+							transform: translate(-50%, -50%);
+							background: #fff;
+							padding: 0;
+							max-width: 900px;
+							width: 95%;
+							max-height: 85vh;
+							overflow: visible;
+							border-radius: 6px;
+							display: flex;
+							flex-direction: column;
+						"
+					>
+						<header
+							style="
+								display: flex;
+								justify-content: space-between;
+								align-items: center;
+								margin-bottom: 12px;
+								padding: 16px 20px;
+							"
+						>
 							<h2 id="modal-title">Division Form</h2>
-							<button id="modal-close" class="btn-small" aria-label="Close">Close</button>
+							<button id="modal-close" class="btn-small" aria-label="Close">
+								Close
+							</button>
 						</header>
-						<section id="modal-body" style="padding:20px;flex:1;overflow:auto;"></section>
-						<footer style="display:flex;justify-content:flex-end;margin-top:12px;gap:8px;padding:12px 20px;">
-							<button id="modal-download" class="btn-small">Download PDF</button>
+						<section
+							id="modal-body"
+							style="padding: 20px; flex: 1; overflow: auto"
+						></section>
+						<footer
+							style="
+								display: flex;
+								justify-content: flex-end;
+								margin-top: 12px;
+								gap: 8px;
+								padding: 12px 20px;
+							"
+						>
+							<button id="modal-download" class="btn-small">
+								Download PDF
+							</button>
 						</footer>
 					</div>
 				</div>
