@@ -154,7 +154,7 @@ main {
 }
 
 .history-item {
-	padding: 0.75rem;
+	padding: 0.75rem 1rem;
 	border-left: var(--card-border-left);
 	margin-bottom: 0.75rem;
 	background-color: var(--background-color);
@@ -162,6 +162,7 @@ main {
 	flex-direction: column;
 	gap: var(--gap-small);
 	transition: background-color 0.2s;
+	word-wrap: break-word;
 }
 
 .history-item:hover {
@@ -176,14 +177,35 @@ main {
 
 .field-value {
 	color: var(--secondary-color);
-	font-size: 0.95rem;
+	font-size: 0.9rem;
 	padding-left: var(--padding-small);
+	line-height: 1.3rem;
+}
+
+.field-value strong {
+	color: var(--primary-color);
+	display: block;
+	margin-top: 0.5rem;
 }
 
 .timestamp {
 	color: var(--accent-color);
-	font-size: 0.8rem;
+	font-size: 0.75rem;
 	font-style: italic;
+	align-self: flex-end;
+	margin-top: 0.25rem;
+}
+
+/* Program & Payee Highlights */
+.program-highlight {
+	font-weight: bold;
+	color: var(--primary-color);
+}
+
+.payee-list {
+	font-size: 0.85rem;
+	color: var(--secondary-color);
+	margin-left: 1rem;
 }
 
 /* =============================
