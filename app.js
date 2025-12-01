@@ -636,8 +636,8 @@ app.patch("/api/division/full-update", async (req, res) => {
 		}
 
 		if (divisionChanges.length) {
-			changeLog.push("Division Changes:");
-			changeLog.push(...divisionChanges);
+			changeLog.push(`Division Changes: ${divisionName}`);
+			changeLog.push(...divisionChanges.map((change) => `  ${change}`));
 		}
 
 		// Handle Created Programs
