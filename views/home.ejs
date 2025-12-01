@@ -5,6 +5,8 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Home Page</title>
 
+		<!-- html2pdf for client-side PDF generation -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 		<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
 		<script src="//cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 		<% const _serverDepartments = typeof departments !== 'undefined' ?
@@ -59,6 +61,7 @@
 						</a>
 					</div>
 				</section>
+				<button class="view-form-btn" id="main-view-form-btn">View Form</button>
 
 				<!-- Modal for viewing a division form -->
 				<div id="form-modal" class="modal" style="display: none">
@@ -126,6 +129,4 @@
 			</div>
 		</main>
 	</body>
-	<!-- html2pdf for client-side PDF generation -->
-	<script src="https://unpkg.com/html2pdf.js@0.9.3/dist/html2pdf.bundle.min.js"></script>
 </html>
