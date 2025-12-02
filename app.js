@@ -436,6 +436,10 @@ app.get("/", authenticateUser, preventCache, async (req, res) => {
  */
 app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 	try {
+		// Debug: Check database connection
+		const [dbCheck] = await pool.query("SELECT DATABASE() as db_name");
+		console.log(`\n*** Connected to database: ${dbCheck[0].db_name} ***`);
+
 		// Get year from query parameter, default to empty (show all)
 		const selectedYear = req.query.year || "";
 
@@ -502,6 +506,24 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 		}
 
 		const [rows] = await pool.query(query, params);
+
+		// Debug logging
+		console.log(`\n=== Edit Page Query Debug ===`);
+		console.log(`Selected Year: "${selectedYear}"`);
+		console.log(`Total rows returned: ${rows.length}`);
+		const uniqueDivisions = [...new Set(rows.map((r) => r.division_name))];
+		console.log(`Unique divisions: ${uniqueDivisions.join(", ")}`);
+
+		// Show first few rows with review data
+		console.log(`\nFirst 3 rows detail:`);
+		rows.slice(0, 3).forEach((row, i) => {
+			console.log(
+				`  Row ${i + 1}: Division="${row.division_name}", ReviewYear="${
+					row.review_year
+				}", UnderReview=${row.division_under_review}`
+			);
+		});
+		console.log(`============================\n`);
 
 		const divisionsMap = {};
 		rows.forEach((row) => {
