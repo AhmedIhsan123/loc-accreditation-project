@@ -212,7 +212,7 @@ function buildChangelogList(changelogs) {
 
 		const fieldName = document.createElement("span");
 		fieldName.classList.add("field-name");
-		fieldName.textContent = `Anonymous User`;
+		fieldName.textContent = `Change made by ${entry.user_name || "Anonymous"}`;
 
 		const fieldValue = document.createElement("span");
 		fieldValue.classList.add("field-value");

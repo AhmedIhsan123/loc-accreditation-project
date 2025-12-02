@@ -589,11 +589,9 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 });
 
 /**
- * ------------------------------
  * PATCH: Full update from frontend
  * Handles creation, updates, deletion, AND moving of programs
  * with COMPREHENSIVE changelog tracking (including payee add/remove)
- * ------------------------------
  */
 app.patch("/api/division/full-update", async (req, res) => {
 	const connection = await pool.getConnection();
@@ -627,6 +625,10 @@ app.patch("/api/division/full-update", async (req, res) => {
 			return res.status(404).json({ error: "Division not found" });
 		}
 		const divisionID = divisionRows[0].ID;
+
+		// Get user info from session
+		const userId = req.session.user?.id;
+		const userName = req.session.user?.first_name || "Anonymous";
 
 		// Changelog entries - order matters for display
 		const changeLog = [];
@@ -964,8 +966,8 @@ app.patch("/api/division/full-update", async (req, res) => {
 		const summary = changeLog.join("\n");
 
 		await connection.query(
-			"INSERT INTO Changelog (save_time, changes) VALUES (?, ?)",
-			[new Date(), summary]
+			"INSERT INTO Changelog (save_time, changes, user_name) VALUES (?, ?, ?)",
+			[new Date(), summary, userName]
 		);
 
 		await connection.commit();
@@ -980,7 +982,6 @@ app.patch("/api/division/full-update", async (req, res) => {
 		connection.release();
 	}
 });
-
 /**
  * Helper: generate PDF stream (used by preview and download)
  * - disposition can be "inline" (preview) or "attachment" (download)
