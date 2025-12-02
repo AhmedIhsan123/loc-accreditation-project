@@ -436,32 +436,72 @@ app.get("/", authenticateUser, preventCache, async (req, res) => {
  */
 app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 	try {
-		const [rows] = await pool.query(
-			`SELECT
-        d.ID AS division_ID,
-        d.division_name,
+		// Get year from query parameter, default to empty (show all)
+		const selectedYear = req.query.year || "";
+
+		let query, params;
+
+		if (selectedYear) {
+			// Filter by specific year - only show divisions under review for that year
+			query = `SELECT
+        Divisions.ID AS division_ID,
+        Divisions.division_name,
         chair.person_name AS chair_name,
         dean.person_name AS dean_name,
         loc.person_name AS loc_rep,
         pen.person_name AS pen_contact,
-        p.ID AS program_ID,
-        p.program_name,
-        p.has_been_paid,
-        p.report_submitted,
-        p.under_review,
-        p.notes,
-        py.ID AS payee_ID,
-        py.payee_name,
-        py.payee_amount AS amount
-      FROM Divisions d
-      LEFT JOIN Programs p ON d.ID = p.division_ID
-      LEFT JOIN Payees py ON p.ID = py.program_ID
-      LEFT JOIN Persons chair ON d.chair_ID = chair.ID
-      LEFT JOIN Persons dean ON d.dean_ID = dean.ID
-      LEFT JOIN Persons loc ON d.loc_ID = loc.ID
-      LEFT JOIN Persons pen ON d.pen_ID = pen.ID
-      ORDER BY d.division_name, p.program_name, py.payee_name`
-		);
+        Reviews.under_review AS division_under_review,
+        Reviews.academic_year AS review_year,
+        Programs.ID AS program_ID,
+        Programs.program_name,
+        Programs.has_been_paid,
+        Programs.report_submitted,
+        Programs.notes,
+        Payees.ID AS payee_ID,
+        Payees.payee_name,
+        Payees.payee_amount AS amount
+      FROM Divisions
+      LEFT JOIN Reviews ON Divisions.ID = Reviews.division_ID AND Reviews.academic_year = ?
+      LEFT JOIN Programs ON Divisions.ID = Programs.division_ID
+      LEFT JOIN Payees ON Programs.ID = Payees.program_ID
+      LEFT JOIN Persons chair ON Divisions.chair_ID = chair.ID
+      LEFT JOIN Persons dean ON Divisions.dean_ID = dean.ID
+      LEFT JOIN Persons loc ON Divisions.loc_ID = loc.ID
+      LEFT JOIN Persons pen ON Divisions.pen_ID = pen.ID
+      WHERE Reviews.under_review = 1
+      ORDER BY Divisions.division_name, Programs.program_name, Payees.payee_name`;
+			params = [selectedYear];
+		} else {
+			// Show all divisions and all programs (no filter)
+			query = `SELECT
+        Divisions.ID AS division_ID,
+        Divisions.division_name,
+        chair.person_name AS chair_name,
+        dean.person_name AS dean_name,
+        loc.person_name AS loc_rep,
+        pen.person_name AS pen_contact,
+        NULL AS division_under_review,
+        NULL AS review_year,
+        Programs.ID AS program_ID,
+        Programs.program_name,
+        Programs.has_been_paid,
+        Programs.report_submitted,
+        Programs.notes,
+        Payees.ID AS payee_ID,
+        Payees.payee_name,
+        Payees.payee_amount AS amount
+      FROM Divisions
+      LEFT JOIN Programs ON Divisions.ID = Programs.division_ID
+      LEFT JOIN Payees ON Programs.ID = Payees.program_ID
+      LEFT JOIN Persons chair ON Divisions.chair_ID = chair.ID
+      LEFT JOIN Persons dean ON Divisions.dean_ID = dean.ID
+      LEFT JOIN Persons loc ON Divisions.loc_ID = loc.ID
+      LEFT JOIN Persons pen ON Divisions.pen_ID = pen.ID
+      ORDER BY Divisions.division_name, Programs.program_name, Payees.payee_name`;
+			params = [];
+		}
+
+		const [rows] = await pool.query(query, params);
 
 		const divisionsMap = {};
 		rows.forEach((row) => {
@@ -474,6 +514,8 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 					penContact: row.pen_contact || "",
 					locRep: row.loc_rep || "",
 					chairName: row.chair_name || "",
+					underReview: Boolean(row.division_under_review),
+					academicYear: row.review_year,
 					programList: [],
 				};
 			}
@@ -489,7 +531,6 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 						programName: row.program_name,
 						hasBeenPaid: Boolean(row.has_been_paid),
 						reportSubmitted: Boolean(row.report_submitted),
-						underReview: Boolean(row.under_review),
 						notes: row.notes || "",
 						payees: {},
 					};
@@ -506,10 +547,16 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 			}
 		});
 
-		res.render("edit", { departments: Object.values(divisionsMap) });
+		res.render("edit", {
+			departments: Object.values(divisionsMap),
+			selectedYear: selectedYear,
+		});
 	} catch (error) {
 		console.error("Error fetching divisions for edit:", error);
-		res.status(500).render("edit", { departments: [] });
+		res.status(500).render("edit", {
+			departments: [],
+			selectedYear: "2025-2026",
+		});
 	}
 });
 

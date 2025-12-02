@@ -6,11 +6,14 @@
 		<title>Edit Sheet</title>
 		<link rel="stylesheet" href="styles/styles.css" />
 		<link rel="stylesheet" href="styles/edit.css" />
+		<link rel="stylesheet" href="styles/home.css" />
 		<% const _serverDepartments = typeof departments !== 'undefined' ?
 		departments : []; %>
+		<% const _selectedYear = typeof selectedYear !== 'undefined' ?
+		selectedYear : ''; %>
 
 		<script type="application/json" id="server-data">
-			<%- JSON.stringify({departments: _serverDepartments}) %>
+			<%- JSON.stringify({departments: _serverDepartments, selectedYear: _selectedYear}) %>
 		</script>
 
 		<script>
@@ -59,9 +62,19 @@
 					</button>
 				</div>
 
-				<fieldset id="div-select-set" class="top-section fieldset">
-					<label for="division-select">Choose a Division</label>
-					<select name="division" id="division-select">
+			<fieldset id="div-select-set" class="top-section fieldset">
+				<label for="year-select">Academic Year</label>
+				<select name="year" id="year-select">
+					<option value="" <%= _selectedYear === '' ? 'selected' : '' %>>-- All Divisions --</option>
+					<option value="2025-2026" <%= _selectedYear === '2025-2026' ? 'selected' : '' %>>2025-2026</option>
+					<option value="2026-2027" <%= _selectedYear === '2026-2027' ? 'selected' : '' %>>2026-2027</option>
+					<option value="2027-2028" <%= _selectedYear === '2027-2028' ? 'selected' : '' %>>2027-2028</option>
+					<option value="2028-2029" <%= _selectedYear === '2028-2029' ? 'selected' : '' %>>2028-2029</option>
+					<option value="2029-2030" <%= _selectedYear === '2029-2030' ? 'selected' : '' %>>2029-2030</option>
+				</select>
+
+				<label for="division-select">Choose a Division</label>
+				<select name="division" id="division-select">
 						<option value="">-- Select division --</option>
 						<% if (_serverDepartments && _serverDepartments.length) {
 						_serverDepartments.forEach(function (d) { %>
@@ -76,7 +89,6 @@
 						</option>
 						<% }); } %>
 					</select>
-
 					<label for="dean-input">Dean: </label>
 					<input type="text" id="dean-input" disabled />
 

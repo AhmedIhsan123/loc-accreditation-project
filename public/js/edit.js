@@ -2,10 +2,13 @@
 	FORM DATA
 	============================== */
 /**
- * Holds server-provided departments array.
+ * Holds server-provided departments array and selected year.
  * This mirrors the backend payload exactly.
  */
-const data = { departments: window.serverDepartments || [] };
+const data = {
+	departments: window.serverDepartments || [],
+	selectedYear: window.selectedYear || "2025-2026",
+};
 
 /**
  * Stores a snapshot of the form before edits begin.
@@ -91,6 +94,7 @@ const cancelFormBtn = safeGetByIdOrName("cancel-form-btn", "cancel");
 const showMoreBtn = safeGetByIdOrName("show-more-btn", "show-more");
 const addProgramBtn = safeGetByIdOrName("add-program-btn", "add-program");
 const returnBtn = safeGetByIdOrName("return-btn", "return");
+const yearSelect = safeGetByIdOrName("year-select", "year");
 
 // Ensure essential DOM elements exist; fail early with console warnings
 if (!divSelector)
@@ -256,7 +260,9 @@ function setupProgramButtons(programCard) {
 	if (programTitle) {
 		// Store original name as a data attribute for reference
 		if (!programTitle.dataset.originalName) {
-			programTitle.dataset.originalName = programTitle.textContent.replace(/→.*$/, "").trim();
+			programTitle.dataset.originalName = programTitle.textContent
+				.replace(/→.*$/, "")
+				.trim();
 		}
 
 		programTitle.addEventListener("click", () => {
@@ -266,25 +272,28 @@ function setupProgramButtons(programCard) {
 
 			// Get current name (strip move badge if present)
 			const currentName = programTitle.textContent.replace(/→.*$/, "").trim();
-			
+
 			// Prompt for new name
 			const newName = prompt("Enter new program name:", currentName);
-			
+
 			// Validate input
 			if (!newName || newName.trim() === "") {
 				alert("Program name cannot be empty.");
 				return;
 			}
-			
+
 			if (newName.trim() === currentName) {
 				return; // No change
 			}
 
 			// Check for duplicate names in the current division
 			const allVisiblePrograms = getVisiblePrograms();
-			const duplicateExists = Array.from(allVisiblePrograms).some(prog => {
+			const duplicateExists = Array.from(allVisiblePrograms).some((prog) => {
 				if (prog === programCard) return false; // Skip self
-				const existingName = prog.querySelector(".p-title")?.textContent.replace(/→.*$/, "").trim();
+				const existingName = prog
+					.querySelector(".p-title")
+					?.textContent.replace(/→.*$/, "")
+					.trim();
 				return existingName === newName.trim();
 			});
 
@@ -310,7 +319,9 @@ function setupProgramButtons(programCard) {
 			programCard.dataset.renamedProgram = "true";
 			programCard.dataset.oldProgramName = currentName;
 
-			console.log(`Renamed program from "${currentName}" to "${newName.trim()}"`);
+			console.log(
+				`Renamed program from "${currentName}" to "${newName.trim()}"`
+			);
 		});
 
 		// Add visual feedback that title is clickable when in edit mode
@@ -468,12 +479,12 @@ function restoreOriginalState() {
 	if (!originalState) return;
 
 	// Remove all move badges and clear move-related data attributes
-	document.querySelectorAll('.program').forEach((program) => {
+	document.querySelectorAll(".program").forEach((program) => {
 		const moveBadge = program.querySelector(".move-badge");
 		if (moveBadge) {
 			moveBadge.remove();
 		}
-		
+
 		// Clear move-related data attributes
 		if (program.dataset.targetDivision) {
 			delete program.dataset.targetDivision;
@@ -481,7 +492,7 @@ function restoreOriginalState() {
 		if (program.dataset.movedProgram) {
 			delete program.dataset.movedProgram;
 		}
-		
+
 		// Clear rename-related data attributes
 		if (program.dataset.renamedProgram) {
 			delete program.dataset.renamedProgram;
@@ -784,8 +795,20 @@ returnBtn.addEventListener("click", () => {
 	cancelFormBtn.style.display = "none";
 	addProgramBtn.style.display = "none";
 
-	window.location.href = "/"; // go to main page
+	// Redirect to homepage
+	window.location.href = "/";
 });
+
+/**
+ * Year select event listener
+ * - Reloads the page with the selected year as a query parameter
+ */
+if (yearSelect) {
+	yearSelect.addEventListener("change", (e) => {
+		const selectedYear = e.target.value;
+		window.location.href = `/edit?year=${selectedYear}`;
+	});
+}
 
 /**
  * Click handler for the add program button.
@@ -844,19 +867,21 @@ addProgramBtn.addEventListener("click", () => {
  */
 function openMoveModal(programCard) {
 	const currentDivision = divSelector.value;
-	const programTitle = programCard.querySelector(".p-title")?.textContent || "Program";
-	
+	const programTitle =
+		programCard.querySelector(".p-title")?.textContent || "Program";
+
 	// Store reference to program being moved
 	currentProgramToMove = programCard;
-	
+
 	// Update modal title
 	moveProgramNameEl.textContent = `Moving: ${programTitle}`;
-	
+
 	// Clear and populate target division dropdown
-	targetDivisionSelect.innerHTML = '<option value="">-- Select division --</option>';
-	
+	targetDivisionSelect.innerHTML =
+		'<option value="">-- Select division --</option>';
+
 	// Add all divisions except the current one
-	data.departments.forEach(dept => {
+	data.departments.forEach((dept) => {
 		if (dept.divisionName !== currentDivision) {
 			const option = document.createElement("option");
 			option.value = dept.divisionName;
@@ -864,7 +889,7 @@ function openMoveModal(programCard) {
 			targetDivisionSelect.appendChild(option);
 		}
 	});
-	
+
 	// Show modal
 	moveProgramModal.style.display = "block";
 }
@@ -883,40 +908,44 @@ function closeMoveModal() {
  */
 function confirmProgramMove() {
 	const targetDivision = targetDivisionSelect.value;
-	
+
 	if (!targetDivision) {
 		alert("Please select a target division.");
 		return;
 	}
-	
+
 	if (!currentProgramToMove) {
 		alert("No program selected to move.");
 		return;
 	}
-	
-	const programTitle = currentProgramToMove.querySelector(".p-title")?.textContent || "";
-	
+
+	const programTitle =
+		currentProgramToMove.querySelector(".p-title")?.textContent || "";
+
 	// Mark the program with the target division for the save operation
 	currentProgramToMove.dataset.targetDivision = targetDivision;
 	currentProgramToMove.dataset.movedProgram = "true";
-	
+
 	// Visual feedback - add a badge or indicator
 	const existingBadge = currentProgramToMove.querySelector(".move-badge");
 	if (existingBadge) {
 		existingBadge.remove();
 	}
-	
+
 	const moveBadge = document.createElement("span");
 	moveBadge.className = "move-badge";
 	moveBadge.textContent = `→ Moving to ${targetDivision}`;
-	moveBadge.style.cssText = "display:inline-block;margin-left:10px;padding:4px 8px;background:#ffc107;color:#000;border-radius:4px;font-size:12px;font-weight:600;";
-	
+	moveBadge.style.cssText =
+		"display:inline-block;margin-left:10px;padding:4px 8px;background:#ffc107;color:#000;border-radius:4px;font-size:12px;font-weight:600;";
+
 	const titleEl = currentProgramToMove.querySelector(".p-title");
 	if (titleEl) {
 		titleEl.appendChild(moveBadge);
 	}
-	
-	alert(`Program "${programTitle}" will be moved to "${targetDivision}" when you save.`);
+
+	alert(
+		`Program "${programTitle}" will be moved to "${targetDivision}" when you save.`
+	);
 	closeMoveModal();
 }
 
@@ -962,16 +991,18 @@ saveFormBtn.addEventListener("click", async () => {
 	// Determine which programs were deleted
 	if (originalState && originalState.programNames) {
 		const currentProgramNames = Array.from(getVisiblePrograms()).map(
-			(p) => p.querySelector(".p-title")?.textContent.replace(/→.*$/, "").trim() || ""
+			(p) =>
+				p.querySelector(".p-title")?.textContent.replace(/→.*$/, "").trim() ||
+				""
 		);
-		
+
 		// Include old names of renamed programs in the list of "current" programs
 		const renamedOldNames = Array.from(getVisiblePrograms())
-			.filter(p => p.dataset.renamedProgram === "true")
-			.map(p => p.dataset.oldProgramName);
-		
+			.filter((p) => p.dataset.renamedProgram === "true")
+			.map((p) => p.dataset.oldProgramName);
+
 		const allCurrentNames = [...currentProgramNames, ...renamedOldNames];
-		
+
 		const deletedPrograms = originalState.programNames.filter(
 			(name) => !allCurrentNames.includes(name)
 		);
@@ -981,7 +1012,9 @@ saveFormBtn.addEventListener("click", async () => {
 
 	getVisiblePrograms().forEach((program) => {
 		const titleEl = program.querySelector(".p-title");
-		const programName = titleEl ? titleEl.textContent.replace(/→.*$/, "").trim() : "";
+		const programName = titleEl
+			? titleEl.textContent.replace(/→.*$/, "").trim()
+			: "";
 		const payees = {};
 
 		program.querySelectorAll(".payee-item").forEach((item) => {
@@ -1009,15 +1042,21 @@ saveFormBtn.addEventListener("click", async () => {
 		};
 
 		// Check if this program was renamed
-		if (program.dataset.renamedProgram === "true" && program.dataset.oldProgramName) {
+		if (
+			program.dataset.renamedProgram === "true" &&
+			program.dataset.oldProgramName
+		) {
 			programData.oldProgramName = program.dataset.oldProgramName;
 			divisionUpdate.renamedPrograms.push(programData);
 		}
 		// Check if this program is marked for moving
-		else if (program.dataset.movedProgram === "true" && program.dataset.targetDivision) {
+		else if (
+			program.dataset.movedProgram === "true" &&
+			program.dataset.targetDivision
+		) {
 			divisionUpdate.movedPrograms.push({
 				...programData,
-				targetDivision: program.dataset.targetDivision
+				targetDivision: program.dataset.targetDivision,
 			});
 		} else {
 			divisionUpdate.programs.push(programData);
