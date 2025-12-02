@@ -21,6 +21,38 @@ main {
 	height: 100%;
 }
 
+.auth-status {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.status-badge {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: white;
+	font-size: 0.9rem;
+}
+
+.status-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #4ade80;
+	animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
 /* =============================
    Section Base Styles
    ============================= */

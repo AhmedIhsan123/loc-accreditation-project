@@ -344,7 +344,7 @@ async function getOrCreatePersonId(name, connectionOrPool = pool) {
 /**
  * GET: Home (render departments + changelog)
  */
-app.get("/", async (req, res) => {
+app.get("/", authenticateUser, async (req, res) => {
 	try {
 		const [rows] = await pool.query(
 			`SELECT
@@ -429,7 +429,7 @@ app.get("/", async (req, res) => {
 /**
  * GET: Edit Page
  */
-app.get("/edit", async (req, res) => {
+app.get("/edit", authenticateUser, async (req, res) => {
 	try {
 		const [rows] = await pool.query(
 			`SELECT
