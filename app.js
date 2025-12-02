@@ -446,7 +446,7 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 		let query, params;
 
 		if (selectedYear) {
-			// Filter by specific year - only show divisions under review for that year
+			// Filter by specific year - only show programs under review for that year
 			query = `SELECT
         Divisions.ID AS division_ID,
         Divisions.division_name,
@@ -454,7 +454,7 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
         dean.person_name AS dean_name,
         loc.person_name AS loc_rep,
         pen.person_name AS pen_contact,
-        Reviews.under_review AS division_under_review,
+        Reviews.under_review AS program_under_review,
         Reviews.academic_year AS review_year,
         Programs.ID AS program_ID,
         Programs.program_name,
@@ -465,8 +465,8 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
         Payees.payee_name,
         Payees.payee_amount AS amount
       FROM Divisions
-      LEFT JOIN Reviews ON Divisions.ID = Reviews.division_ID AND Reviews.academic_year = ?
       LEFT JOIN Programs ON Divisions.ID = Programs.division_ID
+      LEFT JOIN Reviews ON Programs.ID = Reviews.program_ID AND Reviews.academic_year = ?
       LEFT JOIN Payees ON Programs.ID = Payees.program_ID
       LEFT JOIN Persons chair ON Divisions.chair_ID = chair.ID
       LEFT JOIN Persons dean ON Divisions.dean_ID = dean.ID
@@ -518,9 +518,11 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 		console.log(`\nFirst 3 rows detail:`);
 		rows.slice(0, 3).forEach((row, i) => {
 			console.log(
-				`  Row ${i + 1}: Division="${row.division_name}", ReviewYear="${
-					row.review_year
-				}", UnderReview=${row.division_under_review}`
+				`  Row ${i + 1}: Program="${row.program_name}", Division="${
+					row.division_name
+				}", ReviewYear="${row.review_year}", UnderReview=${
+					row.program_under_review
+				}`
 			);
 		});
 		console.log(`============================\n`);
@@ -536,8 +538,6 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 					penContact: row.pen_contact || "",
 					locRep: row.loc_rep || "",
 					chairName: row.chair_name || "",
-					underReview: Boolean(row.division_under_review),
-					academicYear: row.review_year,
 					programList: [],
 				};
 			}
