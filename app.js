@@ -433,6 +433,9 @@ app.get("/", authenticateUser, preventCache, async (req, res) => {
 
 /**
  * GET: Edit Page
+ * - Always fetches ALL programs for the selected division
+ * - If a year is selected, includes review status info
+ * - Frontend can then filter display based on review status
  */
 app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 	try {
@@ -446,7 +449,8 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 		let query, params;
 
 		if (selectedYear) {
-			// Filter by specific year - only show programs under review for that year
+			// Fetch ALL programs, but LEFT JOIN with Reviews for the selected year
+			// This allows frontend to see review status while still showing all programs
 			query = `SELECT
         Divisions.ID AS division_ID,
         Divisions.division_name,
@@ -472,7 +476,6 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
       LEFT JOIN Persons dean ON Divisions.dean_ID = dean.ID
       LEFT JOIN Persons loc ON Divisions.loc_ID = loc.ID
       LEFT JOIN Persons pen ON Divisions.pen_ID = pen.ID
-      WHERE Reviews.under_review = 1
       ORDER BY Divisions.division_name, Programs.program_name, Payees.payee_name`;
 			params = [selectedYear];
 		} else {
@@ -484,7 +487,7 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
         dean.person_name AS dean_name,
         loc.person_name AS loc_rep,
         pen.person_name AS pen_contact,
-        NULL AS division_under_review,
+        NULL AS program_under_review,
         NULL AS review_year,
         Programs.ID AS program_ID,
         Programs.program_name,
@@ -553,6 +556,7 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 						programName: row.program_name,
 						hasBeenPaid: Boolean(row.has_been_paid),
 						reportSubmitted: Boolean(row.report_submitted),
+						underReview: Boolean(row.program_under_review),
 						notes: row.notes || "",
 						payees: {},
 					};
@@ -568,6 +572,8 @@ app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 				}
 			}
 		});
+
+		console.log(divisionsMap);
 
 		res.render("edit", {
 			departments: Object.values(divisionsMap),

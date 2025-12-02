@@ -205,9 +205,10 @@ divSelector.addEventListener("change", () => {
    SHOW PROGRAM CARDS
    ============================== */
 /**
- * Reveals all program cards that belong to a given division.
+ * Reveals program cards that belong to a given division.
  * Hides all program cards first, then selectively shows matching ones.
  * @param {string} divisionName
+ * @param {boolean} showAll - If true, show all programs; if false, show only under-review programs
  */
 function showProgramCards(divisionName, showAll) {
 	// Hide all program cards
@@ -219,20 +220,21 @@ function showProgramCards(divisionName, showAll) {
 	);
 	if (!division || !division.programList) return;
 
-	// Reveal cards for all under-review programs
+	// Reveal cards based on showAll flag
 	division.programList.forEach((prog) => {
 		const safeId = `${prog.programName}-program`;
 		const programCard = document.getElementById(safeId);
-		if (!showAll) {
-			if (programCard && prog.underReview) {
-				programCard.style.display = "block";
-				setupProgramButtons(programCard);
-			}
-		} else {
-			if (programCard) {
-				programCard.style.display = "block";
-				setupProgramButtons(programCard);
-			}
+
+		console.log(prog);
+
+		if (!programCard) return; // Program card not found in DOM
+
+		// Show program if:
+		// 1. showAll is true (show everything), OR
+		// 2. showAll is false AND the program is under review (underReview is truthy)
+		if (showAll || prog.underReview) {
+			programCard.style.display = "block";
+			setupProgramButtons(programCard);
 		}
 	});
 }
