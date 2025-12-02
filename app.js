@@ -6,7 +6,11 @@ import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import MySQLStoreConstructor from "express-mysql-session";
-import { authenticateUser, redirectIfAuthenticated } from "./middlewares.js";
+import {
+	authenticateUser,
+	redirectIfAuthenticated,
+	preventCache,
+} from "./middlewares.js";
 
 dotenv.config();
 
@@ -185,11 +189,12 @@ app.post("/register", async (req, res) => {
  * POST: Logout
  * ------------------------------
  */
-app.post("/logout", authenticateUser, (req, res) => {
+app.post("/logout", authenticateUser, preventCache, (req, res) => {
 	req.session.destroy((error) => {
 		if (error) {
 			console.error("Logout error:", error);
 		}
+		res.clearCookie("connect.sid");
 		res.redirect("/login");
 	});
 });
@@ -344,7 +349,7 @@ async function getOrCreatePersonId(name, connectionOrPool = pool) {
 /**
  * GET: Home (render departments + changelog)
  */
-app.get("/", authenticateUser, async (req, res) => {
+app.get("/", authenticateUser, preventCache, async (req, res) => {
 	try {
 		const [rows] = await pool.query(
 			`SELECT
@@ -429,7 +434,7 @@ app.get("/", authenticateUser, async (req, res) => {
 /**
  * GET: Edit Page
  */
-app.get("/edit", authenticateUser, async (req, res) => {
+app.get("/edit", authenticateUser, preventCache, async (req, res) => {
 	try {
 		const [rows] = await pool.query(
 			`SELECT
@@ -1020,7 +1025,7 @@ async function streamDivisionPdfById(res, divisionId, disposition = "inline") {
  * GET: PDF preview (inline)
  * Call: /pdf-preview?division=Division%20Name
  */
-app.get("/pdf-preview", async (req, res) => {
+app.get("/pdf-preview", authenticateUser, preventCache, async (req, res) => {
 	const divisionName = req.query.division;
 	if (!divisionName)
 		return res.status(400).send("Query parameter 'division' is required");
@@ -1041,22 +1046,27 @@ app.get("/pdf-preview", async (req, res) => {
  * GET: Download division PDF (attachment)
  * Call: /download-division-pdf-file?division=Division%20Name
  */
-app.get("/download-division-pdf-file", async (req, res) => {
-	const divisionName = req.query.division;
-	if (!divisionName)
-		return res.status(400).send("Query parameter 'division' is required");
+app.get(
+	"/download-division-pdf-file",
+	authenticateUser,
+	preventCache,
+	async (req, res) => {
+		const divisionName = req.query.division;
+		if (!divisionName)
+			return res.status(400).send("Query parameter 'division' is required");
 
-	try {
-		const divisionRow = await findDivisionByNameTolerant(divisionName);
-		if (!divisionRow) {
-			return res.status(404).send("Division not found or has no data");
+		try {
+			const divisionRow = await findDivisionByNameTolerant(divisionName);
+			if (!divisionRow) {
+				return res.status(404).send("Division not found or has no data");
+			}
+			await streamDivisionPdfById(res, divisionRow.ID, "attachment");
+		} catch (error) {
+			console.error("Error generating downloadable division PDF:", error);
+			res.status(500).send("Failed to generate PDF");
 		}
-		await streamDivisionPdfById(res, divisionRow.ID, "attachment");
-	} catch (error) {
-		console.error("Error generating downloadable division PDF:", error);
-		res.status(500).send("Failed to generate PDF");
 	}
-});
+);
 
 /**
  * POST: Save division contact info and program data (non-transactional; intended for simple saves)
