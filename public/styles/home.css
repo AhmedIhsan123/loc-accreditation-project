@@ -242,24 +242,6 @@ main {
 }
 
 /* =============================
-   Version History Section
-   ============================= */
-#version-history-section {
-	grid-area: version-history;
-}
-
-.table-container {
-	width: 100%;
-	overflow-x: auto;
-}
-
-.table-container table {
-	width: 100%;
-	border-collapse: collapse;
-	white-space: nowrap;
-}
-
-/* =============================
    Modal Styles
    ============================= */
 .modal-backdrop {
@@ -276,14 +258,14 @@ main {
 	top: 50%;
 	transform: translate(-50%, -50%);
 	background: #fff;
+	padding: 0;
 	max-width: 900px;
 	width: 95%;
 	max-height: 85vh;
+	overflow: visible;
 	border-radius: 6px;
 	display: flex;
 	flex-direction: column;
-	overflow: visible;
-	z-index: 1100;
 }
 
 .modal-content > header {
@@ -297,10 +279,20 @@ main {
 	z-index: 1200;
 }
 
+#form-modal {
+	display: none;
+}
+
 #modal-body {
 	padding: 20px;
 	flex: 1;
 	overflow: auto;
+}
+
+#modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
 }
 
 .modal-content > footer {

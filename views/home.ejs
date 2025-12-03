@@ -69,57 +69,21 @@
 				<button class="view-form-btn" id="main-view-form-btn">View Form</button>
 
 				<!-- Modal for viewing a division form -->
-				<div id="form-modal" class="modal" style="display: none">
+				<div id="form-modal" class="modal">
 					<div
 						class="modal-backdrop"
 						id="modal-backdrop"
-						style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5)"
 					></div>
-					<div
-						class="modal-content"
-						style="
-							position: fixed;
-							left: 50%;
-							top: 50%;
-							transform: translate(-50%, -50%);
-							background: #fff;
-							padding: 0;
-							max-width: 900px;
-							width: 95%;
-							max-height: 85vh;
-							overflow: visible;
-							border-radius: 6px;
-							display: flex;
-							flex-direction: column;
-						"
-					>
-						<header
-							style="
-								display: flex;
-								justify-content: space-between;
-								align-items: center;
-								margin-bottom: 12px;
-								padding: 16px 20px;
-							"
-						>
+					<div class="modal-content">
+						<header>
 							<h2 id="modal-title">Division Form</h2>
 							<button id="modal-close" class="btn-small" aria-label="Close">
 								Close
 							</button>
 						</header>
-						<section
-							id="modal-body"
-							style="padding: 20px; flex: 1; overflow: auto"
-						></section>
-						<footer
-							style="
-								display: flex;
-								justify-content: flex-end;
-								margin-top: 12px;
-								gap: 8px;
-								padding: 12px 20px;
-							"
-						>
+						<section id="modal-body">
+						</section>
+						<footer>
 							<button id="modal-download" class="btn-small">
 								Download PDF
 							</button>
