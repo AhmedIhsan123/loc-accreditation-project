@@ -6,14 +6,13 @@ body {
 	display: grid;
 	grid-template-rows: auto 1fr;
 	min-height: 100vh;
-	height: 100vh;
-	overflow: hidden;
+	max-height: 100vh;
 }
 
 main {
 	padding: 3rem;
 	height: 100%;
-	overflow: hidden;
+	overflow: auto;
 }
 
 #page-container {
@@ -140,6 +139,7 @@ main {
 	border-radius: var(--border-radius);
 	overflow: hidden;
 	min-height: 200px;
+	max-height: 100%;
 	transition: transform 0.2s;
 }
 
@@ -176,6 +176,9 @@ main {
 	padding: var(--padding-small);
 	flex: 1;
 	overflow-y: auto;
+	max-height: 100%;
+	scroll-snap-type: y mandatory;
+	scroll-behavior: smooth;
 }
 
 .program-card {
@@ -186,6 +189,8 @@ main {
 	text-align: center;
 	font-size: 0.85rem;
 	color: var(--primary-color);
+	scroll-snap-align: start;
+	scroll-snap-stop: always;
 }
 
 /* =============================
@@ -425,11 +430,13 @@ main {
 	body {
 		height: auto;
 		min-height: 100vh;
+		max-height: none;
 	}
 
 	main {
 		padding: 0.5rem;
 		height: auto;
+		overflow: visible;
 	}
 
 	#page-container {
@@ -449,7 +456,7 @@ main {
 	}
 
 	#edit-form-section {
-		pointer-events: none;
+		pointer-events: all;
 	}
 
 	#click-form-msg {
