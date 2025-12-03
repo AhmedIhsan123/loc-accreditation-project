@@ -1,21 +1,25 @@
+/* =============================
+   CSS VARIABLES
+   ============================= */
+
 :root {
-	/* ==== COLORS ==== */
+	/* Colors */
 	--primary-color: #2c882b;
 	--secondary-color: #5b5a5a;
-	--speacial-color: orange;
+	--special-color: orange;
 	--accent-color: #999;
 	--background-color: #f9f9f9;
 	--hover-color: #f0f0f0;
 	--text-color: white;
 	--section-background-color: grey;
 
-	/* ==== TYPOGRAPHY ==== */
+	/* Typography */
 	--font-family: "Segoe UI", Arial, sans-serif;
 	--font-size-base: 1rem;
 	--font-size-small: 0.9rem;
 	--font-size-large: 1.25rem;
 
-	/* ==== SPACING ==== */
+	/* Spacing */
 	--padding-small: 0.5rem;
 	--padding-medium: 1rem;
 	--padding-large: 1.5rem;
@@ -23,18 +27,21 @@
 	--gap-medium: 1rem;
 	--gap-large: 3rem;
 
-	/* ==== BORDERS & RADIUS ==== */
+	/* Borders & Radius */
 	--border-radius: 8px;
 	--border-color: black;
 	--border-width: 1px;
 	--card-border-left: 3px solid var(--primary-color);
 
-	/* ==== SHADOWS ==== */
+	/* Shadows */
 	--box-shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
 	--box-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* Global reset */
+/* =============================
+   GLOBAL RESET
+   ============================= */
+
 * {
 	margin: 0;
 	padding: 0;
@@ -43,7 +50,10 @@
 	user-select: none;
 }
 
-/* Navigation bar styles */
+/* =============================
+   NAVIGATION BAR
+   ============================= */
+
 .navigation-bar {
 	display: flex;
 	flex-direction: row;
@@ -58,37 +68,89 @@
 .navigation-bar a {
 	color: var(--text-color);
 	text-decoration: none;
+	transition: opacity 0.2s;
 }
 
-.logout-button {
+.navigation-bar a:hover {
+	opacity: 0.9;
+}
+
+.navigation-bar h1 {
+	font-size: 1.75rem;
+	font-weight: 600;
+}
+
+/* =============================
+   BUTTONS
+   ============================= */
+
+.logout-button,
+.btn-signIn {
 	cursor: pointer;
 	border: none;
-	border-radius: 0; /* boxy */
+	border-radius: 0;
 	padding: var(--padding-small) var(--padding-medium);
+	background-color: transparent;
+	color: var(--text-color);
 	transition: background-color 0.2s;
-}
-.logout-button:hover {
-	background-color: var(--primary-color);
-	color: white;
+	font-size: 1rem;
 }
 
+.logout-button:hover,
+.btn-signIn:hover {
+	background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Disabled States */
 .logout-button:disabled,
-input:disabled {
+.btn-signIn:disabled,
+input:disabled,
+button:disabled {
 	cursor: not-allowed;
-	opacity: 0.6; /* optional: show visually disabled */
+	opacity: 0.6;
 }
 
 .logout-button:disabled:hover,
-input:disabled:hover {
-	background-color: inherit; /* prevent hover color change */
+.btn-signIn:disabled:hover,
+input:disabled:hover,
+button:disabled:hover {
+	background-color: inherit;
 	color: unset;
+}
+
+/* =============================
+   RESPONSIVE NAVIGATION
+   ============================= */
+
+@media (max-width: 800px) {
+	.navigation-bar h1 {
+		font-size: 1.5rem;
+	}
+}
+
+@media (max-width: 600px) {
+	.navigation-bar {
+		padding: var(--padding-small) var(--padding-medium);
+	}
+
+	.navigation-bar h1 {
+		font-size: 1.2rem;
+	}
+
+	.logout-button,
+	.btn-signIn {
+		padding: 0.4rem 0.75rem;
+		font-size: 0.9rem;
+	}
 }
 
 @media (max-width: 500px) {
 	.navigation-bar h1 {
-		font-size: 1.25rem;
+		display: none;
 	}
-	.logout-button {
+
+	.logout-button,
+	.btn-signIn {
 		font-size: 1rem;
 	}
 }

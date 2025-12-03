@@ -1,16 +1,19 @@
 /* =============================
-   Global Layout
+   PAGE LAYOUT
    ============================= */
+
 body {
 	display: grid;
-	grid-template-rows: 10% 90%;
+	grid-template-rows: auto 1fr;
+	min-height: 100vh;
 	height: 100vh;
-	max-height: 100vh;
+	overflow: hidden;
 }
 
 main {
 	padding: 3rem;
 	height: 100%;
+	overflow: hidden;
 }
 
 #page-container {
@@ -19,7 +22,12 @@ main {
 	grid-template-columns: 3fr 1fr;
 	gap: var(--gap-large);
 	height: 100%;
+	max-height: 100%;
 }
+
+/* =============================
+   AUTH STATUS
+   ============================= */
 
 .auth-status {
 	display: flex;
@@ -54,8 +62,9 @@ main {
 }
 
 /* =============================
-   Section Base Styles
+   SECTION BASE
    ============================= */
+
 .section {
 	display: flex;
 	flex-direction: column;
@@ -64,43 +73,62 @@ main {
 	background-color: var(--background-color);
 	border-radius: var(--border-radius);
 	box-shadow: var(--box-shadow-dark);
-	max-height: 100%;
 	overflow: hidden;
+	height: 100%;
 }
 
 .section-title {
 	color: var(--primary-color);
 	border-bottom: 2px solid var(--primary-color);
-}
-
-#division-cards-section,
-#history-list {
-	overflow-y: auto;
-	max-height: 100%;
+	padding-bottom: 0.5rem;
+	margin-bottom: 0.5rem;
+	flex-shrink: 0;
 }
 
 /* =============================
-   Edit Form Section
+   EDIT FORM SECTION
    ============================= */
+
 #edit-form-section {
 	grid-area: edit-form;
 	cursor: pointer;
 	transition: background-color 0.15s ease-in-out;
+	position: relative;
 }
 
 #edit-form-section:hover {
 	background-color: var(--hover-color);
 }
 
-/* =============================
-   Division Card Grid
-   ============================= */
 #division-cards-section {
 	display: grid;
 	gap: var(--gap-medium);
 	grid-template-columns: repeat(5, 1fr);
-	height: 100%;
+	overflow-y: auto;
+	flex: 1;
+	padding-right: 0.5rem;
 }
+
+#click-form-msg {
+	color: var(--secondary-color);
+	text-align: center;
+	margin-top: auto;
+	flex-shrink: 0;
+}
+
+#click-form-msg a {
+	color: var(--primary-color);
+	text-decoration: none;
+	transition: opacity 0.2s;
+}
+
+#click-form-msg a:hover {
+	opacity: 0.8;
+}
+
+/* =============================
+   DIVISION CARDS
+   ============================= */
 
 .div-card {
 	display: flex;
@@ -109,15 +137,24 @@ main {
 	box-shadow: var(--box-shadow-light);
 	text-align: center;
 	color: white;
-	height: 100%;
+	border-radius: var(--border-radius);
+	overflow: hidden;
+	min-height: 200px;
+	transition: transform 0.2s;
+}
+
+.div-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .card-title {
 	background-color: var(--primary-color);
 	padding: var(--padding-small);
+	font-weight: bold;
+	flex-shrink: 0;
 }
 
-/* Contacts */
 .card-contacts {
 	display: flex;
 	flex-direction: column;
@@ -129,14 +166,16 @@ main {
 	margin: 0.5rem;
 	color: var(--primary-color);
 	text-align: left;
+	font-size: 0.85rem;
 }
 
-/* Programs */
 .programs-container {
 	display: flex;
 	flex-direction: column;
 	gap: var(--gap-small);
 	padding: var(--padding-small);
+	flex: 1;
+	overflow-y: auto;
 }
 
 .program-card {
@@ -145,16 +184,14 @@ main {
 	padding: var(--padding-small);
 	border-radius: var(--border-radius);
 	text-align: center;
-	font-size: small;
+	font-size: 0.85rem;
 	color: var(--primary-color);
-	transition: background-color 0.15s ease-in-out;
 }
 
-.program-card:hover {
-	background-color: var(--hover-color);
-}
+/* =============================
+   VIEW FORM BUTTON
+   ============================= */
 
-/* View Form Button */
 .view-form-btn {
 	position: relative;
 	z-index: 20;
@@ -166,16 +203,18 @@ main {
 	color: white;
 	border: none;
 	border-radius: 4px;
+	transition: background-color 0.2s;
+	font-size: 0.95rem;
 }
 
-#click-form-msg {
-	color: var(--secondary-color);
-	align-self: center;
+.view-form-btn:hover {
+	background-color: #256d23;
 }
 
 /* =============================
-   Changelog Section
+   CHANGELOG SECTION
    ============================= */
+
 #changelog-section {
 	grid-area: changelog;
 }
@@ -184,6 +223,9 @@ main {
 	list-style: none;
 	padding: 0;
 	margin: 0;
+	overflow-y: auto;
+	flex: 1;
+	padding-right: 0.5rem;
 }
 
 .history-item {
@@ -191,6 +233,7 @@ main {
 	border-left: var(--card-border-left);
 	margin-bottom: 0.75rem;
 	background-color: var(--background-color);
+	border-radius: 4px;
 	display: flex;
 	flex-direction: column;
 	gap: var(--gap-small);
@@ -212,7 +255,7 @@ main {
 	color: var(--secondary-color);
 	font-size: 0.9rem;
 	padding-left: var(--padding-small);
-	line-height: 1.3rem;
+	line-height: 1.4;
 }
 
 .field-value strong {
@@ -229,7 +272,6 @@ main {
 	margin-top: 0.25rem;
 }
 
-/* Program & Payee Highlights */
 .program-highlight {
 	font-weight: bold;
 	color: var(--primary-color);
@@ -242,8 +284,13 @@ main {
 }
 
 /* =============================
-   Modal Styles
+   MODAL
    ============================= */
+
+.modal {
+	display: none;
+}
+
 .modal-backdrop {
 	position: fixed;
 	inset: 0;
@@ -258,55 +305,56 @@ main {
 	top: 50%;
 	transform: translate(-50%, -50%);
 	background: #fff;
-	padding: 0;
 	max-width: 900px;
 	width: 95%;
 	max-height: 85vh;
-	overflow: visible;
 	border-radius: 6px;
 	display: flex;
 	flex-direction: column;
+	overflow: hidden;
+	z-index: 1001;
 }
 
 .modal-content > header {
 	position: sticky;
 	top: 0;
 	background: #fff;
-	padding: 16px 20px;
+	padding: 1rem 1.25rem;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	border-bottom: 1px solid #e5e5e5;
 	z-index: 1200;
+	flex-shrink: 0;
 }
 
-#form-modal {
-	display: none;
+.modal-content > header h2 {
+	margin: 0;
+	font-size: 1.25rem;
+	color: var(--primary-color);
 }
 
 #modal-body {
-	padding: 20px;
+	padding: 1.25rem;
 	flex: 1;
 	overflow: auto;
-}
-
-#modal-backdrop {
-	position: fixed;
-	inset: 0;
-	background: rgba(0, 0, 0, 0.5);
 }
 
 .modal-content > footer {
 	display: flex;
 	justify-content: flex-end;
-	gap: 8px;
-	padding: 12px 20px;
+	gap: 0.5rem;
+	padding: 0.75rem 1.25rem;
+	border-top: 1px solid #e5e5e5;
+	flex-shrink: 0;
 }
 
 #pdf-preview-iframe {
 	width: 100%;
 	height: 600px;
 	border: 1px solid #ccc;
-	margin-top: 16px;
+	margin-top: 1rem;
+	border-radius: 4px;
 }
 
 .btn-small {
@@ -314,10 +362,10 @@ main {
 	color: white;
 	border: none;
 	border-radius: 4px;
-	padding: 0.25rem 0.75rem;
+	padding: 0.5rem 1rem;
 	font-size: 0.95rem;
 	cursor: pointer;
-	transition: background 0.2s;
+	transition: background-color 0.2s;
 }
 
 .btn-small:hover {
@@ -325,25 +373,31 @@ main {
 }
 
 /* =============================
-   Responsive Layouts
+   RESPONSIVE BREAKPOINTS
    ============================= */
+
+/* Large Screens - 5 columns */
+@media (min-width: 1601px) {
+	#division-cards-section {
+		grid-template-columns: repeat(5, 1fr);
+	}
+}
+
+/* Medium-Large Screens - 4 columns */
 @media (max-width: 1600px) {
 	#division-cards-section {
 		grid-template-columns: repeat(4, 1fr);
 	}
 }
 
+/* Medium Screens - 3 columns */
 @media (max-width: 1380px) {
 	main {
-		padding: 0;
-	}
-
-	.section {
-		border-radius: 0;
+		padding: 1.5rem;
 	}
 
 	#page-container {
-		gap: 0;
+		gap: var(--gap-medium);
 	}
 
 	#division-cards-section {
@@ -351,32 +405,105 @@ main {
 	}
 }
 
+/* Small-Medium Screens - 2 columns */
 @media (max-width: 1200px) {
+	main {
+		padding: 1rem;
+	}
+
+	#page-container {
+		grid-template-columns: 2fr 1fr;
+	}
+
 	#division-cards-section {
 		grid-template-columns: repeat(2, 1fr);
 	}
 }
 
-@media (max-width: 800px) {
+/* Tablets - Vertical Layout */
+@media (max-width: 900px) {
+	body {
+		height: auto;
+		min-height: 100vh;
+	}
+
 	main {
-		height: fit-content;
+		padding: 0.5rem;
+		height: auto;
+	}
+
+	#page-container {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		height: auto;
 	}
 
 	.section {
 		max-height: 600px;
 	}
 
+	#division-cards-section {
+		grid-template-columns: repeat(2, 1fr);
+		max-height: 500px;
+	}
+
+	#edit-form-section {
+		pointer-events: none;
+	}
+
+	#click-form-msg {
+		pointer-events: all;
+	}
+
+	#click-form-msg a p {
+		display: inline-block;
+		padding: 0.5rem 1rem;
+		background-color: var(--primary-color);
+		color: var(--text-color);
+		border-radius: 4px;
+		transition: background-color 0.2s;
+	}
+
+	#click-form-msg a:hover p {
+		background-color: #256d23;
+	}
+
+	.auth-status {
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.status-badge {
+		font-size: 0.85rem;
+	}
+}
+
+/* Mobile - Single Column */
+@media (max-width: 600px) {
+	main {
+		padding: 0;
+	}
+
+	.section {
+		border-radius: 0;
+		max-height: 500px;
+		padding: 0.75rem;
+	}
+
 	#page-container {
-		display: flex;
-		flex-direction: column;
+		gap: 0;
 	}
 
 	#division-cards-section {
 		grid-template-columns: 1fr;
+		gap: var(--gap-small);
 	}
-}
 
-@media (max-width: 600px) {
+	.div-card {
+		min-height: 150px;
+	}
+
 	.modal-content {
 		width: 100%;
 		max-width: 100%;
@@ -386,14 +513,59 @@ main {
 	}
 
 	.modal-content > header {
-		padding: 10px 12px;
+		padding: 0.75rem 1rem;
+	}
+
+	.modal-content > header h2 {
+		font-size: 1.1rem;
 	}
 
 	#modal-body {
-		padding: 8px;
+		padding: 1rem;
+	}
+
+	.modal-content > footer {
+		padding: 0.75rem 1rem;
 	}
 
 	#pdf-preview-iframe {
-		height: calc(100vh - 120px);
+		height: calc(100vh - 150px);
+	}
+
+	.btn-small {
+		padding: 0.4rem 0.8rem;
+		font-size: 0.9rem;
+	}
+}
+
+/* Small Mobile */
+@media (max-width: 400px) {
+	.section {
+		padding: 0.5rem;
+	}
+
+	.section-title {
+		font-size: 1.1rem;
+	}
+
+	.history-item {
+		padding: 0.5rem 0.75rem;
+		font-size: 0.9rem;
+	}
+
+	.field-name {
+		font-size: 0.9rem;
+	}
+
+	.field-value {
+		font-size: 0.85rem;
+	}
+
+	.card-contacts {
+		font-size: 0.8rem;
+	}
+
+	.program-card {
+		font-size: 0.8rem;
 	}
 }

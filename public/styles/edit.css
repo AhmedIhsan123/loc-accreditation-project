@@ -1,48 +1,70 @@
-/* ===============================
-   PAGE BACKGROUND & LAYOUT
-================================*/
+/* =============================
+   PAGE LAYOUT
+   ============================= */
+
 body {
 	display: grid;
-	grid-template-rows: 10% 90%;
+	grid-template-rows: auto 1fr;
+	min-height: 100vh;
 	height: 100vh;
-	max-height: 100vh;
 	background-color: var(--background-color);
+	overflow: hidden;
 }
 
-/* Main page container */
 main {
 	padding: var(--padding-large);
+	overflow: auto;
+	height: 100%;
 }
 
-/* Text area styles */
+/* =============================
+   FORM ELEMENTS
+   ============================= */
+
 textarea {
 	resize: none;
 	height: 5rem;
 	padding: var(--padding-small);
 	border: 1px solid var(--border-color);
-	border-radius: 0; /* boxy */
+	border-radius: 0;
 	transition: border-color 0.3s, box-shadow 0.3s;
+	font-family: inherit;
 }
+
 textarea:focus {
 	border-color: var(--primary-color);
 	box-shadow: 0 0 4px rgba(44, 136, 43, 0.3);
 	outline: none;
 }
 
-/* Input styles */
-input {
-	padding: 0.35rem 0.25rem;
+input[type="text"],
+input[type="number"],
+select {
+	padding: 0.35rem 0.5rem;
 	border: 1px solid var(--border-color);
 	border-radius: 0;
 	transition: border-color 0.3s, box-shadow 0.3s;
+	font-family: inherit;
 }
-input:focus {
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
 	border-color: var(--primary-color);
 	box-shadow: 0 0 4px rgba(44, 136, 43, 0.3);
 	outline: none;
 }
 
-/* Container styles */
+input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	cursor: pointer;
+}
+
+/* =============================
+   CONTAINER & FIELDSET BASE
+   ============================= */
+
 fieldset,
 section,
 .program {
@@ -50,85 +72,74 @@ section,
 	box-shadow: var(--box-shadow-light);
 	padding: var(--padding-medium);
 	background-color: white;
-	border-radius: 0; /* boxy */
+	border-radius: 0;
 	display: flex;
 	flex-direction: column;
 	transition: box-shadow 0.2s;
 }
 
-/* Hover effect only (no jumping) */
 fieldset:hover,
 .program:hover {
 	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
-/* Content container */
 .content-container {
 	display: grid;
 	grid-template-areas:
 		"selector"
+		"buttons"
 		"programs";
 	height: fit-content;
 	overflow: auto;
 	max-height: 100%;
 	box-shadow: var(--box-shadow-light);
 	padding: var(--padding-medium);
+	gap: var(--gap-medium);
+	background-color: white;
 }
 
-/* Base Classes */
-.set-title {
-	color: var(--primary-color);
-	border-bottom: 2px solid var(--primary-color);
-}
-.program {
-	height: 100%; /* equal height */
-	display: flex;
-	flex-direction: column;
-}
+/* =============================
+   TITLES & HEADINGS
+   ============================= */
+
+.set-title,
 .p-title {
 	color: var(--primary-color);
 	padding-bottom: var(--padding-small);
 	border-bottom: 2px solid var(--primary-color);
 	font-weight: 600;
-}
-.program-sections {
-	box-shadow: var(--box-shadow-light);
-	padding: var(--padding-medium);
-	background-color: var(--background-color);
-	border-radius: 0; /* boxy */
-}
-.program-notes-section {
-	display: flex;
-	flex-direction: column;
-}
-.payee-container {
-	display: flex;
-	flex-direction: column;
-	gap: var(--gap-small);
-}
-.program-money-section {
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	gap: var(--gap-small);
-}
-.program-money-section div {
-	display: flex;
-	flex-direction: row;
-	gap: var(--gap-small);
-}
-.error {
-	display: none;
-	color: red;
-	font-size: var(--font-size-small);
-}
-.buttons-container {
-	display: flex;
-	flex-direction: row;
-	gap: var(--gap-small);
+	margin-bottom: var(--gap-small);
 }
 
-/* Selector section */
+.p-title {
+	font-size: 1.1rem;
+}
+
+/* =============================
+   FORM EDIT BUTTONS
+   ============================= */
+
+.form-edit-container {
+	grid-area: buttons;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--gap-small);
+	padding: var(--padding-small);
+	background-color: var(--background-color);
+	border-radius: 0;
+	box-shadow: var(--box-shadow-light);
+}
+
+.form-edit-container button {
+	flex: 1 1 auto;
+	min-width: 120px;
+}
+
+/* =============================
+   DIVISION SELECTOR
+   ============================= */
+
 #div-select-set {
 	display: flex;
 	flex-direction: row;
@@ -138,58 +149,409 @@ fieldset:hover,
 	grid-area: selector;
 }
 
-#div-select-set div {
+#div-select-set > div {
 	display: flex;
 	flex-direction: column;
+	gap: 0.25rem;
+	flex: 1 1 200px;
+	min-width: 150px;
 }
 
-/* Programs set */
+#div-select-set label {
+	font-weight: 600;
+	color: var(--primary-color);
+	font-size: 0.9rem;
+}
+
+#div-select-set input,
+#div-select-set select {
+	width: 100%;
+}
+
+/* =============================
+   PROGRAMS CONTAINER
+   ============================= */
+
 #programs-container {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 	gap: var(--gap-medium);
 	overflow: auto;
 	grid-area: programs;
-	padding-top: var(--gap-medium);
-	align-items: stretch; /* all cards same height in row */
+	align-items: start;
 }
 
-/* Payee input section */
-.program-payee-input-section {
-	display: grid;
-	grid-template-columns: 85% 15%;
+.program {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-medium);
+}
+
+.program-sections {
+	box-shadow: var(--box-shadow-light);
+	padding: var(--padding-medium);
+	background-color: var(--background-color);
+	border-radius: 0;
+	gap: var(--gap-small);
+}
+
+/* =============================
+   PAYEE SECTION
+   ============================= */
+
+.payee-container {
+	display: flex;
+	flex-direction: column;
+	gap: var(--gap-small);
 }
 
 .payee-item {
 	padding: var(--padding-small);
 	border-left: var(--card-border-left);
-	border-radius: 0; /* boxy */
+	border-radius: 0;
+	background-color: white;
 	transition: background-color 0.2s;
 }
+
 .payee-item:hover {
 	background-color: var(--hover-color);
 }
 
+.payee-item label {
+	display: block;
+	font-weight: 600;
+	color: var(--primary-color);
+	margin-bottom: 0.25rem;
+	font-size: 0.9rem;
+}
+
+.program-payee-input-section {
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	gap: var(--gap-small);
+	align-items: center;
+}
+
+.program-payee-input-section input[type="text"] {
+	flex: 1;
+}
+
+.program-payee-input-section input[type="number"] {
+	width: 100px;
+}
+
+.remove-payee-btn {
+	white-space: nowrap;
+}
+
+/* =============================
+   PROGRAM SECTIONS
+   ============================= */
+
+.program-notes-section {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+}
+
+.program-notes-section label {
+	font-weight: 600;
+	color: var(--primary-color);
+	font-size: 0.9rem;
+}
+
+.program-money-section {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: var(--gap-small);
+}
+
+.program-money-section > div {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: var(--gap-small);
+}
+
+.program-money-section label {
+	font-weight: 600;
+	color: var(--primary-color);
+	font-size: 0.9rem;
+}
+
+/* =============================
+   BUTTONS
+   ============================= */
+
 button {
 	cursor: pointer;
 	border: none;
-	border-radius: 0; /* boxy */
+	border-radius: 0;
 	padding: var(--padding-small) var(--padding-medium);
 	transition: background-color 0.2s;
+	background-color: white;
+	border: 1px solid var(--border-color);
+	font-size: 0.95rem;
 }
+
 button:hover {
 	background-color: var(--primary-color);
 	color: white;
 }
 
-button:disabled,
-input:disabled {
+button:disabled {
 	cursor: not-allowed;
-	opacity: 0.6; /* optional: show visually disabled */
+	opacity: 0.6;
 }
 
-button:disabled:hover,
-input:disabled:hover {
-	background-color: inherit; /* prevent hover color change */
+button:disabled:hover {
+	background-color: inherit;
 	color: unset;
+}
+
+.buttons-container {
+	display: flex;
+	flex-direction: row;
+	gap: var(--gap-small);
+	flex-wrap: wrap;
+}
+
+.buttons-container button {
+	flex: 1 1 auto;
+	min-width: 100px;
+}
+
+/* Add Program Button */
+#add-program-btn {
+	min-height: 150px;
+	background-color: var(--background-color);
+	border: 2px dashed var(--primary-color);
+	color: var(--primary-color);
+	font-weight: 600;
+	font-size: 1.1rem;
+	transition: all 0.2s;
+}
+
+#add-program-btn:hover {
+	background-color: var(--primary-color);
+	color: white;
+	border-style: solid;
+}
+
+/* =============================
+   ERROR MESSAGES
+   ============================= */
+
+.error {
+	display: none;
+	color: red;
+	font-size: var(--font-size-small);
+	margin-top: 0.25rem;
+}
+
+/* =============================
+   MOVE PROGRAM MODAL
+   ============================= */
+
+#move-program-modal.modal {
+	display: none;
+}
+
+#move-program-modal .modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 1000;
+}
+
+#move-program-modal .modal-content {
+	position: fixed;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	background: #fff;
+	max-width: 500px;
+	width: 95%;
+	border-radius: 6px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	z-index: 1001;
+}
+
+#move-program-modal .modal-content header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.25rem;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+#move-program-modal .modal-content header h2 {
+	margin: 0;
+	font-size: 1.25rem;
+	color: var(--primary-color);
+}
+
+#move-modal-body {
+	padding: 1.25rem;
+}
+
+#move-program-name {
+	margin-bottom: 1rem;
+	font-weight: 600;
+	color: var(--primary-color);
+}
+
+#move-modal-body label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 600;
+	color: var(--secondary-color);
+}
+
+#target-division-select {
+	width: 100%;
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+}
+
+#move-program-modal .modal-content footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	padding: 0.75rem 1.25rem;
+	border-top: 1px solid #e0e0e0;
+}
+
+#move-modal-confirm {
+	background: #007bff;
+	color: #fff;
+	border: none;
+}
+
+#move-modal-confirm:hover {
+	background: #0056b3;
+}
+
+/* =============================
+   RESPONSIVE BREAKPOINTS
+   ============================= */
+
+/* Large Screens - 3 columns */
+@media (min-width: 1400px) {
+	#programs-container {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+/* Medium Screens - 2 columns */
+@media (max-width: 1399px) and (min-width: 900px) {
+	#programs-container {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+/* Tablets */
+@media (max-width: 1200px) {
+	main {
+		padding: var(--padding-medium);
+	}
+}
+
+@media (max-width: 900px) {
+	main {
+		padding: var(--padding-small);
+	}
+
+	.content-container {
+		padding: var(--padding-small);
+	}
+
+	#programs-container {
+		grid-template-columns: 1fr;
+	}
+
+	#div-select-set {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	#div-select-set > div {
+		width: 100%;
+		min-width: auto;
+	}
+
+	.form-edit-container {
+		flex-direction: column;
+	}
+
+	.form-edit-container button {
+		width: 100%;
+	}
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+	body {
+		height: auto;
+	}
+
+	main {
+		padding: 0;
+	}
+
+	.content-container {
+		border-radius: 0;
+	}
+
+	fieldset,
+	section,
+	.program {
+		padding: var(--padding-small);
+	}
+
+	.program-payee-input-section {
+		grid-template-columns: 1fr;
+		gap: 0.25rem;
+	}
+
+	.program-payee-input-section input[type="number"] {
+		width: 100%;
+	}
+
+	.program-money-section > div {
+		flex-wrap: wrap;
+	}
+
+	#move-program-modal .modal-content {
+		width: 100%;
+		max-width: 100%;
+		height: auto;
+		max-height: 90vh;
+	}
+
+	#move-modal-body {
+		padding: 1rem;
+	}
+}
+
+/* Small Mobile */
+@media (max-width: 400px) {
+	.p-title {
+		font-size: 1rem;
+	}
+
+	button {
+		padding: 0.4rem 0.75rem;
+		font-size: 0.9rem;
+	}
+
+	.form-edit-container button {
+		min-width: 100px;
+		font-size: 0.85rem;
+	}
 }
