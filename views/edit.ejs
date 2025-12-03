@@ -32,8 +32,13 @@
 					<h1>Green River College</h1>
 				</a>
 				<% if (user) { %>
+				<div class="auth-status">
+        			<span class="status-badge">
+            			<span class="status-dot"></span>
+            			Logged in as <%= user.username %>
+        		</span>				
 				<form action="/logout" method="POST" style="display: inline">
-					<button type="submit" class="btn-signIn">Logout</button>
+					<button type="submit" class="logout-button">Logout</button>
 				</form>
 				<% } %>
 			</nav>
